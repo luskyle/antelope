@@ -1,0 +1,23 @@
+{
+    "projectName": "helloworld",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "source": [
+    	"helloworld.c"
+    ],
+    "exclude_source": [],
+    "include_directories": [],
+    "compile_args": [
+        "-std=c++17",
+        "-w",
+        "-Os",
+        "-fno-rtti",
+        "-fsized-deallocation",
+        "-fno-weak",
+        "-fPIC"
+    ],
+    "link_args": [],
+    "analyze_files": [
+    	"helloworld.c"
+    ]
+}

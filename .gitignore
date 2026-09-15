@@ -1,0 +1,6 @@
+test.json
+__pycache__
+
+test/log
+test/obj
+test/hello*_*
