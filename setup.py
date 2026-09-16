@@ -12,7 +12,6 @@ setup(name='antelope',
       long_description_content_type='text/markdown',
       license='Apache-2.0',
       classifiers=[
-          'License :: OSI Approved :: Apache Software License',
           'Programming Language :: Python :: 3',
           'Operating System :: POSIX :: Linux',
           'Topic :: Software Development :: Build Tools',
