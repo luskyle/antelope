@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: 校验 tag 与 setup.py 的版本一致
+        run: |
+          declared=$(grep -oP "version='\K[^']+" setup.py | head -1)
+          if [ "${GITHUB_REF_NAME#v}" != "$declared" ]; then
+            echo "tag ${GITHUB_REF_NAME} 与 setup.py 的 version ${declared} 不一致，请先改 setup.py 的版本再重新打 tag" >&2
+            exit 1
+          fi
+      - name: 构建 sdist 与 wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: 创建 Release 并附上安装包
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --generate-notes
