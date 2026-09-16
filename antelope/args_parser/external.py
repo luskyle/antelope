@@ -1,21 +1,21 @@
 from antelope.enums import *
 
 class External():
-    def __init__(self, project_name_global:str="", source_global:list=[], 
-                include_directories_global:list=[], target_type_global:TargetType=TargetType.Static, 
+    def __init__(self, project_name_global:str="", source_global:list=[],
+                include_directories_global:list=[], target_type_global:TargetType=TargetType.Static,
                 compiler_global:CompilerType=CompilerType.gxx, compiler_args_list_global:list=[],
                 link_args_list_global:list=[], output_dir:str='.'):
         self.project_name = project_name_global
-        self.source = source_global
-        self.include_directories = include_directories_global
+        self.source = list(source_global)
+        self.include_directories = list(include_directories_global)
         self.target_type = target_type_global
         self.compiler = compiler_global
-        self.compile_args_list = compiler_args_list_global
-        self.link_args_list = link_args_list_global
+        self.compile_args_list = list(compiler_args_list_global)
+        self.link_args_list = list(link_args_list_global)
         self.link_system_args = ""
         self.link_user_args = ""
         self.output_dir = output_dir
-        
+
         """
         要编译的文件
         """
@@ -25,7 +25,7 @@ class External():
         要编译的 object
         """
         self.obj_files = []
-        
+
         """
         要编译的 文件路径（无后缀）-文件后缀 组成的字典
         """
@@ -47,8 +47,6 @@ class External():
             self.parse_compile_files('.c', item)
             self.parse_compile_files('.cc', item)
             self.parse_compile_files('.cpp', item)
-        # print(input_src)
-        # print(self.compile_files)
 
     def parse_include_directories(self):
         """解析包含参数"""
@@ -60,8 +58,9 @@ class External():
     def parse_link_args(self):
         """解析链接参数"""
         args = ""
+        self.link_system_args = ""
+        self.link_user_args = ""
 
-        self.link_args_list = eval(self.link_args_list)
         for item in self.link_args_list:
             if str(item).startswith('-l'):
                 self.link_system_args += item + ' '
@@ -69,16 +68,14 @@ class External():
                 self.link_user_args += item + ' '
             args += item + ' '
         return args
-    
+
     def parse_compile_files(self, suffix:str, fileItem:str):
-        # print('xxx' + fileItem + '-----' + suffix)        
         if fileItem.endswith(suffix):
             self.compile_files.append(fileItem)
             obj = fileItem.replace('/', '_').replace(suffix, '.o')
             self.obj_files.append(obj)
             self.compile_files_map.update({obj.replace('.o', ''):suffix})
             self.compile_obj_files_map.update({obj:fileItem})
-            # print('dddd' + str(self.compile_files))
 
     def parse_compile_args(self):
         """解析编译参数"""

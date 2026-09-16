@@ -1,6 +1,13 @@
 test.json
-__pycache__
+__pycache__/
+*.py[cod]
+dist/
+build/
+*.egg-info/
+*.whl
+.pytest_cache/
 
 test/log
 test/obj
 test/hello*_*
+*_antel/
