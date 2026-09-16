@@ -81,7 +81,7 @@ antel 可接受的参数如下表所示
 
 ## 文档站点
 
-README 由 Pages 工作流渲染成静态站点，部署在 [https://luskyle.github.io/antelope/](https://luskyle.github.io/antelope/)。仓库首次启用时需在 Settings → Pages 里把 Source 选为 GitHub Actions。
+README 由 Pages 工作流渲染成静态站点，部署在 [https://luskyle.github.io/antelope/](https://luskyle.github.io/antelope/)。Pages 未启用时工作流会自行启用，也可以在 Settings → Pages 里手动把 Source 选为 GitHub Actions。
 
 本地预览：
 
