@@ -1,5 +1,6 @@
 <div class="hero" markdown>
-<img src="images/logo.svg" alt="Antelope" class="hero-logo">
+<img src="images/logo.svg" alt="Antelope" class="hero-logo hero-logo--light">
+<img src="images/logo-dark.svg" alt="Antelope" class="hero-logo hero-logo--dark">
 
 # Antelope
 

@@ -9,7 +9,7 @@ theme:
   name: material
   language: zh
   logo: images/logo.svg
-  favicon: images/favicon.png
+  favicon: images/favicon.svg
   features:
     - navigation.tabs
     - navigation.sections

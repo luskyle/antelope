@@ -40,3 +40,31 @@
 .md-typeset .grid.cards > ul > li {
   border-radius: 0.4rem;
 }
+
+/* logo：浅色底与深色底各一版。
+   头部（导航栏底色最深）按主题切换，尺寸与主题里的 .md-logo img 保持一致 */
+[data-md-color-scheme="slate"] .md-header__button.md-logo img {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .md-header__button.md-logo {
+  background-image: url("../images/logo-dark.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+/* 首页 hero：跟随主题开关切换，不用 prefers-color-scheme，避免手动切换主题时对不上 */
+.hero-logo--dark {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .hero-logo--light {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .hero-logo--dark {
+  display: block;
+}

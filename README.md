@@ -5,7 +5,11 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.11%20%7C%203.13-blue.svg)](https://www.python.org/)
 
-<img src="docs/images/logo.png" alt="Antelope" width="180">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/logo.svg">
+  <img src="docs/images/logo.png" alt="Antelope" width="180">
+</picture>
 
 小巧敏捷的 C/C++ 编译链接工具。读一个 `antel.json`，把项目编成静态库、共享库或可执行程序；不生成 makefile，也不引入额外的构建语言。
 
@@ -86,4 +90,4 @@ zensical serve
 
 [Apache-2.0](LICENSE)
 
-项目 logo 取自 [Openclipart 的 Gazelle](https://openclipart.org/detail/355303/gazelle)（作者 AreYouPrepared，Public Domain），矢量与位图文件在 `docs/images/` 下。
+项目 logo 使用 Microsoft [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) 的山羊图标（MIT，经 Iconify 的 fluent-emoji-flat 集合取得）。文件都在 `docs/images/` 下：`logo.svg` 与 `logo-dark.svg` 分别是浅色底与深色底版本，`favicon.svg` 是站点图标（内置 prefers-color-scheme 深色分支），许可原文见 `LICENSE-fluent-emoji.txt`。
