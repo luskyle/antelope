@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import functools
 import click
@@ -17,6 +18,10 @@ from antelope.cli.init_json import *
 from antelope.cli.console import *
 from antelope.runner import *
 
+DEFAULT_JOBS = min(8, os.cpu_count() or 1)
+RESPONSE_FILE_MODES = ('auto', 'always', 'never')
+GENERATED_TARGETS = ['*.a', '*.so']
+
 class Antelope:
     def __init__(self):
         self.project_name = ""
@@ -27,6 +32,9 @@ class Antelope:
         self.compile_args_list = []
         self.link_args_list = []
         self.analyze_files = []
+        self.jobs = DEFAULT_JOBS
+        self.compile_commands = True
+        self.response_file = 'auto'
 
         self.dir = Directory()
         self.console = Console()
@@ -41,13 +49,15 @@ class Antelope:
         compilerObj = Compiler(self.project_name, self.source,
                             self.include_directories, self.target_type,
                             self.compiler_type, self.compile_args_list,
-                            self.link_args_list, self.output_dir)
+                            self.link_args_list, self.output_dir,
+                            self.jobs, self.compile_commands)
         self.compiler = compilerObj
 
         linkerObj = Linker(self.project_name, self.source,
                             self.include_directories, self.target_type,
                             self.compiler_type, self.compile_args_list,
-                            self.link_args_list, self.output_dir)
+                            self.link_args_list, self.output_dir,
+                            self.response_file)
         self.linker = linkerObj
 
         runnerObj = Runner(self.project_name, self.source,
@@ -100,7 +110,7 @@ class Antelope:
             self.console.WriteNotice('项目没有改动，无需重新构建. 如需强制全量构建，请使用 antel rebuild 构建.')
             return
 
-        os.system(f'rm -rf {self.output_dir}/*.a {self.output_dir}/*.so')
+        self.dir.RemoveFiles(self.output_dir, GENERATED_TARGETS)
 
         self.compiler.compile(stale_sources)
         self.linker.link()
@@ -108,7 +118,7 @@ class Antelope:
 
     def rebuild(self):
         self.buildType = BuildType.Rebuild
-        os.system(f'rm -rf {self.output_dir}/*.a {self.output_dir}/*.so')
+        self.dir.RemoveFiles(self.output_dir, GENERATED_TARGETS)
 
         self.dir.ClearMakeDirectory(f"{self.output_dir}/obj/")
         self.dir.ClearMakeDirectory(f"{self.output_dir}/log/")
@@ -133,6 +143,43 @@ def readList(config:dict, key:str):
         raise ConfigError(f'{key} 必须是数组，当前为 {type(value).__name__}: {value}')
     return list(value)
 
+def readBool(config:dict, key:str, default:bool):
+    """读取布尔型配置项"""
+    value = config.get(key, default)
+    if not isinstance(value, bool):
+        raise ConfigError(f'{key} 必须是 true 或 false，当前为 {type(value).__name__}: {value}')
+    return value
+
+def readJobs(config:dict):
+    """读取并行度。1 表示串行"""
+    value = config.get('jobs', DEFAULT_JOBS)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ConfigError(f'jobs 必须是正整数，当前为 {type(value).__name__}: {value}')
+    if value < 1:
+        raise ConfigError(f'jobs 必须大于 0，当前为 {value}')
+    return value
+
+def readResponseFile(config:dict):
+    """读取响应文件策略：auto（命令行过长才用）/ always / never"""
+    value = str(config.get('response_file', 'auto')).lower()
+    if value not in RESPONSE_FILE_MODES:
+        raise ConfigError(f'response_file 取值非法：{value}，可选 ' + '、'.join(RESPONSE_FILE_MODES))
+    return value
+
+def readProjectName(config:dict):
+    """
+    读取并校验项目名。项目名会进入生成目标名与链接脚本，
+    因此限制为字母、数字、下划线、点与连字符（含中文等 Unicode 文字字符）
+    """
+    name = str(config.get('projectName', '')).strip()
+    if name == '':
+        raise ConfigError('projectName 不能为空')
+
+    if not re.fullmatch(r'[\w.-]+', name):
+        invalid = ''.join(sorted({item for item in name if not re.fullmatch(r'[\w.-]', item)}))
+        raise ConfigError(f'projectName 只能包含字母、数字、下划线、点与连字符，当前含非法字符：{invalid}')
+    return name
+
 def parseJsonConfig(file:str='antel'):
     external_json = External_Json()
 
@@ -142,9 +189,7 @@ def parseJsonConfig(file:str='antel'):
     config = external_json.deserialize(f'./{file}.json')
     antel = Antelope()
 
-    antel.project_name = str(config.get('projectName', '')).strip()
-    if antel.project_name == '':
-        raise ConfigError('projectName 不能为空')
+    antel.project_name = readProjectName(config)
 
     antel.output_dir = f'{antel.project_name}_{file}'
     print('项目名：' + antel.project_name)
@@ -179,6 +224,11 @@ def parseJsonConfig(file:str='antel'):
     antel.compile_args_list = readList(config, 'compile_args')
     antel.link_args_list = readList(config, 'link_args')
     antel.analyze_files = readList(config, 'analyze_files')
+
+    antel.jobs = readJobs(config)
+    antel.compile_commands = readBool(config, 'compile_commands', True)
+    antel.response_file = readResponseFile(config)
+    print(f'并行度：{antel.jobs}  compile_commands.json：' + ('开启' if antel.compile_commands else '关闭'))
 
     antel.flushSetting()
     print('--------------------------------------------------')

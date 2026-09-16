@@ -76,6 +76,7 @@ Pages 未启用时工作流会自行启用，也可以在仓库的 Settings → 
 ```text
 antelope/            包源码
 ├── antelope.py      CLI 入口与构建流程编排
+├── build_plan.py    编译单元与链接作业的数据模型
 ├── md5.py           hash 基线与变更检测
 ├── enums.py         枚举
 ├── errors.py        构建错误类型

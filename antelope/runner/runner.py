@@ -33,9 +33,9 @@ class Runner():
         if self.target_type != TargetType.Executable:
             raise ConfigError(f"目标{self.target_type.name} 不是可执行的程序！")
 
-        program = f'{self.output_dir}/{self.project_name}'
+        program = f'./{self.output_dir}/{self.project_name}'
         if not os.path.exists(program):
             raise ConfigError(f"不存在可执行的程序 {program}，请先执行 antel rebuild 生成项目！")
 
         print("开始执行...", flush=True)
-        self.command.run(f'./{program}')
+        self.command.run_argv([program])

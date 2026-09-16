@@ -9,26 +9,34 @@ class Command():
     """
     统一的外部命令执行入口。非 0 退出码一律抛 CommandError，避免失败被当成成功。
 
+    内部一律以参数列表（argv）为单位，不再把命令拼成字符串再切分——这样含空格或引号的
+    路径与参数不会被走样。字符串入口 run() 仅为兼容保留，内部实现同样转成 argv。
+
     redirect_to 为空且不要求 echo 时，输出直接透传到终端，便于实时看到编译诊断信息。
     """
 
     def run(self, command:str, redirect_to:str='', echo:bool=False):
-        args = shlex.split(command)
-        if shutil.which(args[0]) is None:
-            raise CommandError(command, 127, reason=f'命令不存在或不可执行：{args[0]}')
+        return self.run_argv(shlex.split(command), redirect_to, echo)
+
+    def run_argv(self, argv:list, redirect_to:str='', echo:bool=False):
+        if argv.__len__() == 0:
+            raise CommandError('', 127, reason='空命令')
+
+        if shutil.which(argv[0]) is None:
+            raise CommandError(shlex.join(argv), 127, reason=f'命令不存在或不可执行：{argv[0]}')
 
         if redirect_to == '' and not echo:
-            return self.runInheritOutput(command, args)
-        return self.runCaptureOutput(command, args, redirect_to, echo)
+            return self.runInheritOutput(argv)
+        return self.runCaptureOutput(argv, redirect_to, echo)
 
-    def runInheritOutput(self, command:str, args:list):
-        return_code = subprocess.call(args)
+    def runInheritOutput(self, argv:list):
+        return_code = subprocess.call(argv)
         if return_code != 0:
-            raise CommandError(command, return_code)
+            raise CommandError(shlex.join(argv), return_code)
         return ''
 
-    def runCaptureOutput(self, command:str, args:list, redirect_to:str, echo:bool):
-        call = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    def runCaptureOutput(self, argv:list, redirect_to:str, echo:bool):
+        call = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out, err = call.communicate()
         output = bytes.decode(out) if out else ''
 
@@ -41,6 +49,6 @@ class Command():
             sys.stdout.flush()
 
         if call.returncode != 0:
-            raise CommandError(command, call.returncode, output)
+            raise CommandError(shlex.join(argv), call.returncode, output)
 
         return output

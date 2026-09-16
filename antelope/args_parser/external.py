@@ -12,8 +12,8 @@ class External():
         self.compiler = compiler_global
         self.compile_args_list = list(compiler_args_list_global)
         self.link_args_list = list(link_args_list_global)
-        self.link_system_args = ""
-        self.link_user_args = ""
+        self.link_system_args = []
+        self.link_user_args = []
         self.output_dir = output_dir
 
         """
@@ -49,25 +49,23 @@ class External():
             self.parse_compile_files('.cpp', item)
 
     def parse_include_directories(self):
-        """解析包含参数"""
-        include_dirs = ""
+        """包含路径参数，形如 ['-I', 'include', '-I', 'src']"""
+        includes = []
         for item in self.include_directories:
-            include_dirs += '-I ' + item + ' '
-        return include_dirs
+            includes += ['-I', item]
+        return includes
 
     def parse_link_args(self):
-        """解析链接参数"""
-        args = ""
-        self.link_system_args = ""
-        self.link_user_args = ""
+        """解析链接参数，按是否以 -l 开头分成系统库与用户参数两组"""
+        self.link_system_args = []
+        self.link_user_args = []
 
         for item in self.link_args_list:
             if str(item).startswith('-l'):
-                self.link_system_args += item + ' '
+                self.link_system_args.append(item)
             else:
-                self.link_user_args += item + ' '
-            args += item + ' '
-        return args
+                self.link_user_args.append(item)
+        return list(self.link_args_list)
 
     def parse_compile_files(self, suffix:str, fileItem:str):
         if fileItem.endswith(suffix):
@@ -78,8 +76,5 @@ class External():
             self.compile_obj_files_map.update({obj:fileItem})
 
     def parse_compile_args(self):
-        """解析编译参数"""
-        args = ""
-        for item in self.compile_args_list:
-            args += item + ' '
-        return args
+        """编译参数（结构化列表）"""
+        return list(self.compile_args_list)

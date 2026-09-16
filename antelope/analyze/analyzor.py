@@ -15,5 +15,5 @@ class Analyzor():
                     obj = fileItem.replace('/', '_').replace(suffix, '.o')
                     log_dir = f'{self.output_dir}/log/{obj}'
                     self.dir.ClearMakeDirectory(log_dir)
-                    self.command.run(f'objdump -x {self.output_dir}/obj/{obj}',
-                                    redirect_to=f'{log_dir}/objdump-x')
+                    self.command.run_argv(['objdump', '-x', f'{self.output_dir}/obj/{obj}'],
+                                        redirect_to=f'{log_dir}/objdump-x')

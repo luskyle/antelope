@@ -102,3 +102,73 @@ def test_link_args_are_not_evaluated(project):
 
     write_config(project, link_args=['-lm'])
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+
+
+def test_parallel_and_serial_artifacts_match(project):
+    """jobs 只影响并行度：串行与并行必须产出完全一致的目标"""
+    extra_sources = []
+    for index in (1, 2, 3):
+        name = f'src/aux{index}.c'
+        (project / name).write_text(f'int aux{index}(void){{ return {index}; }}\n')
+        extra_sources.append(name)
+
+    source = ['src/main.c'] + extra_sources
+
+    write_config(project, source=source, jobs=1)
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+    serial_bytes = (project / 'demo_antel' / 'demo').read_bytes()
+
+    write_config(project, source=source, jobs=4)
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+    parallel_bytes = (project / 'demo_antel' / 'demo').read_bytes()
+
+    assert serial_bytes == parallel_bytes
+
+
+def test_compile_commands_json_is_written(project):
+    """构建后应产出 clangd 可用的 compile_commands.json"""
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+
+    entries = json.loads((project / 'demo_antel' / 'compile_commands.json').read_text())
+
+    assert len(entries) == 1
+    assert entries[0]['file'] == 'src/main.c'
+    assert entries[0]['directory'] == str(project)
+    assert entries[0]['arguments'][0] in ('gcc', 'g++')
+    assert '-c' in entries[0]['arguments']
+    assert entries[0]['output'] == 'demo_antel/obj/src_main.o'
+
+
+def test_compile_commands_can_be_disabled(project):
+    write_config(project, compile_commands=False)
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+
+    assert not (project / 'demo_antel' / 'compile_commands.json').exists()
+
+
+def test_source_path_with_spaces(project):
+    """路径含空格时参数不得被切碎（结构化 argv 的直接收益）"""
+    spaced = project / 'src dir'
+    spaced.mkdir()
+    (spaced / 'main.c').write_text('#include <stdio.h>\nint main(){ printf("spaced\\n"); }\n')
+    write_config(project, source=['src dir/main.c'], include_directories=[])
+
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+    assert run_program(project) == 'spaced'
+
+
+def test_project_name_rejects_shell_characters(project):
+    """项目名会写进链接脚本，shell 元字符必须被拒绝"""
+    write_config(project, projectName='demo;rm -rf /')
+    result = CliRunner().invoke(main, ['rebuild'])
+
+    assert result.exit_code != 0
+    assert 'projectName' in result.output
+
+
+def test_invalid_jobs_is_rejected(project):
+    write_config(project, jobs=0)
+    result = CliRunner().invoke(main, ['rebuild'])
+
+    assert result.exit_code != 0
+    assert 'jobs' in result.output
