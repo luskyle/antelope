@@ -85,3 +85,5 @@ zensical serve
 ## 许可
 
 [Apache-2.0](LICENSE)
+
+项目 logo 取自 [Openclipart 的 Gazelle](https://openclipart.org/detail/355303/gazelle)（作者 AreYouPrepared，Public Domain），矢量与位图文件在 `docs/images/` 下。

@@ -8,8 +8,8 @@ copyright: Apache-2.0 License
 theme:
   name: material
   language: zh
-  logo: images/logo.png
-  favicon: images/logo.png
+  logo: images/logo.svg
+  favicon: images/favicon.png
   features:
     - navigation.tabs
     - navigation.sections
