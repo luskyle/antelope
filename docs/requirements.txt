@@ -1,0 +1,6 @@
+# 站点生成器：Zensical
+# 它是 Material for MkDocs 作者的官方后继项目，可直接读本目录的 mkdocs.yml
+# 版本钉死，避免 0.x 的接口变动影响构建；如需退回 MkDocs，把下面一行换成
+#   mkdocs-material>=9.7,<10
+# 即可（mkdocs.yml 两份生成器通用）
+zensical==0.0.62

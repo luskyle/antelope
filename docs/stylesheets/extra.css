@@ -1,0 +1,42 @@
+/* 首页 hero 区，让首屏不只是一段文本 */
+.hero {
+  text-align: center;
+  padding: 1rem 0 2rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.hero-logo {
+  height: 6rem;
+  width: auto;
+}
+
+.hero h1 {
+  margin: 1rem 0 0.4rem;
+  font-weight: 700;
+}
+
+.hero-tagline {
+  margin: 0 auto;
+  max-width: 40rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 1.05rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-top: 1.6rem;
+}
+
+/* 表格较宽时允许横向滚动 */
+.md-typeset table:not([class]) {
+  display: table;
+  overflow-x: auto;
+}
+
+.md-typeset .grid.cards > ul > li {
+  border-radius: 0.4rem;
+}

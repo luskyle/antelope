@@ -1,0 +1,67 @@
+site_name: Antelope
+site_description: 小巧敏捷的 C/C++ 编译链接工具，用于生成静态库、共享库与可执行程序
+site_url: https://luskyle.github.io/antelope/
+repo_url: https://github.com/luskyle/antelope
+repo_name: luskyle/antelope
+copyright: Apache-2.0 License
+
+theme:
+  name: material
+  language: zh
+  logo: images/logo.png
+  favicon: images/logo.png
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+    - content.tabs.link
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: 切换到深色
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: 切换到浅色
+
+nav:
+  - 简介: index.md
+  - 快速开始: quick-start.md
+  - 配置参考: configuration.md
+  - 命令参考: commands.md
+  - 增量构建: incremental-build.md
+  - 编译器支持: compilers.md
+  - 开发与发布: development.md
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - stylesheets/extra.css

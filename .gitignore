@@ -6,7 +6,7 @@ build/
 *.egg-info/
 *.whl
 .pytest_cache/
-_site/
+site/
 
 test/log
 test/obj
