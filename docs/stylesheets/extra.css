@@ -1,9 +1,16 @@
 /* 首页 hero 区，让首屏不只是一段文本 */
 .hero {
   text-align: center;
-  padding: 1rem 0 2rem;
+  padding: 2rem 1rem 2.4rem;
   margin-bottom: 2rem;
-  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  border-bottom: 1px solid var(--antelope-line);
+  border-radius: 0.6rem;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(46, 230, 214, 0.12), transparent 62%),
+    radial-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+  background-size:
+    auto,
+    22px 22px;
 }
 
 .hero-logo {
@@ -37,10 +44,6 @@
   overflow-x: auto;
 }
 
-.md-typeset .grid.cards > ul > li {
-  border-radius: 0.4rem;
-}
-
 /* logo：浅色底与深色底各一版。
    头部（导航栏底色最深）按主题切换，尺寸与主题里的 .md-logo img 保持一致 */
 [data-md-color-scheme="slate"] .md-header__button.md-logo img {
@@ -67,4 +70,89 @@
 
 [data-md-color-scheme="slate"] .hero-logo--dark {
   display: block;
+}
+
+/* ── 深色优先的科技风 ──────────────────────────────────────── */
+
+:root {
+  --antelope-accent: #2ee6d6;
+  --antelope-accent-dim: #12a89d;
+  --antelope-surface: #0e1319;
+  --antelope-surface-2: #151c25;
+  --antelope-line: rgba(148, 163, 184, 0.22);
+}
+
+/* 深色（默认配色）：冷调深底 + 青色点缀，代码块比页面底稍亮一层 */
+[data-md-color-scheme="slate"] {
+  --md-hue: 210;
+  --md-default-bg-color: var(--antelope-surface);
+  --md-default-fg-color: rgba(226, 236, 245, 0.88);
+  --md-default-fg-color--light: rgba(226, 236, 245, 0.6);
+  --md-default-fg-color--lighter: rgba(226, 236, 245, 0.34);
+  --md-default-fg-color--lightest: rgba(226, 236, 245, 0.12);
+  --md-code-bg-color: var(--antelope-surface-2);
+  --md-code-fg-color: rgba(214, 232, 240, 0.92);
+  --md-typeset-a-color: var(--antelope-accent);
+  --md-typeset-table-color: rgba(148, 163, 184, 0.2);
+  --md-typeset-kbd-color: rgba(46, 230, 214, 0.12);
+  --md-typeset-kbd-accent-color: rgba(46, 230, 214, 0.22);
+  --md-typeset-mark-color: rgba(46, 230, 214, 0.22);
+  --md-admonition-bg-color: var(--antelope-surface-2);
+  --md-footer-bg-color: rgba(8, 11, 15, 0.92);
+  --md-footer-bg-color--dark: #080b0f;
+  --md-shadow-z1: 0 0.2rem 0.6rem rgba(0, 0, 0, 0.45);
+  --md-shadow-z2: 0 0.5rem 1.4rem rgba(0, 0, 0, 0.5);
+  scrollbar-color: #2b3542 transparent;
+}
+
+/* 浅色模式：浅底上换成可读的深青，边框换成深色系 */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #0f766e;
+  --antelope-line: rgba(15, 23, 42, 0.12);
+}
+
+/* 顶栏与标签栏：半透 + 毛玻璃 */
+.md-header {
+  background-color: rgba(9, 13, 18, 0.72);
+  backdrop-filter: blur(10px) saturate(140%);
+  border-bottom: 1px solid var(--antelope-line);
+}
+
+.md-tabs {
+  background-color: transparent;
+}
+
+/* 标题：等宽字体，二级标题带青色标记条 */
+.md-typeset h1,
+.md-typeset h2 {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: -0.01em;
+}
+
+.md-typeset h2 {
+  border-left: 3px solid var(--antelope-accent);
+  padding-left: 0.6rem;
+}
+
+/* 卡片：细边框，深色下悬停描青色 */
+.md-typeset .grid.cards > ul > li {
+  border: 1px solid var(--antelope-line);
+  border-radius: 0.55rem;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--antelope-accent-dim);
+  transform: translateY(-2px);
+}
+
+/* 代码块：细边框，与页面底拉开层次 */
+.md-typeset pre > code {
+  border: 1px solid var(--antelope-line);
+  border-radius: 0.4rem;
+}
+
+/* 表头加一层底色，便于在深底上区分 */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background-color: var(--antelope-surface-2);
 }
