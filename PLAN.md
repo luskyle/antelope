@@ -1,0 +1,178 @@
+# antelope 项目计划（基于 DESIGN.md）
+
+> 状态：执行中 · 版本：v0.1 · 日期：2026-09-16 · 依据：[DESIGN.md](DESIGN.md) v0.1
+> 进度：**Phase 0 已完成**（`c6af1a0`，已推送、CI 三版本全绿）· Phase 1 待启动
+
+## 1. 计划怎么用
+
+- **批次（batch）是执行单元**：一个批次 = 一次完整实现 + 自证 + 文档 + 提交推送，不做"半成品先合进去"。
+- 每个批次独立可验证、可回退；批次之间只通过"前置依赖"与"决策项"耦合。
+- 批次开工前，其阻塞的决策项必须先落地（见 §6）；未决时按 §6 的"默认建议"推进，并在批次记录里标注。
+- 里程碑不是时间点，而是**一组批次全部通过验收**的状态。
+
+### 1.1 每批次的固定流程（Definition of Done）
+
+| 步骤 | 要求 |
+| --- | --- |
+| 实现 | 按批次的"交付物"清单落地，改动范围不超出该批次 |
+| 自证 | 该批次的"验收命令"逐条执行并把输出贴进批次记录 |
+| 测试 | `python -m pytest` 全绿；新增能力必须有对应测试 |
+| 文档 | 同步 `docs/` 相关页与 README；DESIGN.md 追加实施记录 |
+| 站点 | `zensical build --strict` 无问题（改动涉及 docs 时） |
+| 提交 | 一个批次一个提交，提交信息说明为什么；推送后 CI 与 Pages 必须绿 |
+
+## 2. 里程碑总览
+
+| 里程碑 | 目标状态 | 批次 | 预计工作量 | 状态 |
+| --- | --- | --- | --- | --- |
+| **M0** | 执行模型与结构化解耦（Phase 0） | — | 1-2 天 | ✅ 已完成 |
+| **M1** | 同一份配置既能 `antel build` 也能 `make`，且两者判定一致 | P1-1 ~ P1-4 | 2-3 天 | ⬜ 待开始 |
+| **M2** | 日常开发体验与常见发布形态齐备（诊断、第三方库、覆盖率、版本化库） | P2-1 ~ P2-4 | 2-3 天 | ⬜ 待开始 |
+| **M3** | 构建能力接近全量 gcc 工作流（LTO、PCH、安装打包、工具包装） | P2-5 ~ P2-8 | 3-4 天 | ⬜ 待开始 |
+| **M4** | 与既有 make 工程互操作（可选） | P3-1 ~ P3-2 | 2-3 天 | ⬜ 待开始 |
+
+## 3. 批次清单
+
+### M1：Makefile 生成与 make 后端
+
+#### P1-1 `antel sync-baseline`
+
+| 项 | 内容 |
+| --- | --- |
+| 目标 | 只刷新 hash 基线、不编译，供 make 构建后对齐两种后端的簿记（DESIGN §3.3 的实测结论） |
+| 交付物 | `antelope.py` 新增 click 命令；复用已有的 `Antelope.save_baseline()` |
+| 前置依赖 | 无 |
+| 验收 | ① `antel sync-baseline` 后 `antel build` 报"没有改动"；② 新增测试：make 构建 → sync-baseline → `antel build` 无重编 |
+| 风险 | 低 |
+
+#### P1-2 `antel gen-makefile`
+
+| 项 | 内容 |
+| --- | --- |
+| 目标 | 由 `antel.json` 生成可独立运行的 Makefile（DESIGN §4.1、§5 Phase 1、附录 B） |
+| 交付物 | 新增 `antelope/makefile.py`（`render(plan)`）；CLI `antel gen-makefile [-o Makefile]` |
+| 关键约定 | 依赖文件命名统一为 `x.o.d`（`-MF $@.d` + `-include $(OBJS:%=%.d)`）；`all` 目标末尾调用 `antel sync-baseline`；`MAKEFLAGS += -j$(JOBS)` |
+| 安全默认 | 默认输出 `Makefile`；**若目标文件已存在且不带"由 antel gen-makefile 生成"标记则拒绝覆盖**并提示改用 `-o`，避免踩掉用户手写的 Makefile |
+| 前置依赖 | P1-1 |
+| 验收 | ① 干净树上 `make -j8` 成功且产物可运行；② 改公共头后 `make` 的重编集合与 `antel build` 一致；③ 已存在的用户 Makefile 不会被覆盖 |
+| 风险 | 依赖命名或引用错位会让 make **静默不重编**（DESIGN §4.1 已实测）→ 必须由测试锁死 |
+
+#### P1-3 `backend: make`
+
+| 项 | 内容 |
+| --- | --- |
+| 目标 | `antel build` / `antel rebuild` 委托 `make -j$jobs` 执行，增量交给 make |
+| 交付物 | 配置字段 `backend`（`antel`/`make`）；`Antelope.build/rebuild` 分支；make 输出归并进 `log/` |
+| 前置依赖 | P1-2 |
+| 验收 | `backend: make` 下 `build`/`rebuild`/`clean` 语义与 antel 后端一致；从 make 内部调用 antel 时透传 jobserver 信息 |
+| 风险 | 错误定位链变长；与 P2-1（诊断聚合）有协同关系 |
+
+#### P1-4 跨实现一致性测试（纳入 CI）
+
+| 项 | 内容 |
+| --- | --- |
+| 目标 | 把 DESIGN §3.3 的三条断言变成常驻测试 |
+| 交付物 | `tests/test_make_backend.py`：不漏编（输入 hash ↔ 产物一致）、两种后端产物字节等价、`sync-baseline` 后无冗余重编 |
+| 前置依赖 | P1-2、P1-3 |
+| 验收 | 三条断言全绿，且随 `pytest` 自动进入 CI |
+| 风险 | 若可执行文件字节受链接器 build-id 影响而不等价，退化为"目标文件字节等价 + 运行行为一致"，并在测试注释里说明原因 |
+
+### M2：日常体验与常见发布形态
+
+#### P2-1 诊断聚合
+
+| 项 | 内容 |
+| --- | --- |
+| 目标 | 并行编译下输出可读：按编译单元聚合输出、失败按文件分组、统计警告数（DESIGN §2.2 第 15 项） |
+| 交付物 | `Compiler` 改用捕获输出（`Command` 已具备 capture 能力）+ 分组打印 |
+| 前置依赖 | 无（可提前做，对 M1 的 make 后端也有帮助） |
+| 验收 | `jobs: 8` 且工程含多处编译错误时，输出按文件分组、给出计数，退出码仍非 0 |
+| 风险 | 捕获会牺牲"实时看到诊断"的体验 → 失败时立即整块回放，成功时静默 |
+
+#### P2-2 pkg-config 集成
+
+| 项 | 内容 |
+| --- | --- |
+| 目标 | 用外部库时不必手抄 `-I`/`-l` |
+| 交付物 | 配置字段 `pkg_config: [...]`；编译/链接参数注入 `pkg-config --cflags/--libs` |
+| 前置依赖 | 无 |
+| 验收 | 配置后用 `pkg-config` 的库可编译链接；`pkg-config` 缺失或包不存在时明确报错 |
+| 风险 | 本机 `pkg-config` 为 0.29.2（较老但够用） |
+
+#### P2-3 覆盖率与消毒器
+
+| 项 | 内容 |
+| --- | --- |
+| 目标 | 常用调试/测试开关一键启用，并回收产物 |
+| 交付物 | 配置字段 `sanitize: [...]`、`coverage: true`；`clean` 一并回收 `.gcda`/`.gcno` |
+| 前置依赖 | 无 |
+| 验收 | 运行后 `gcov` 能产出报告；`clean` 后无残留覆盖率文件 |
+| 风险 | 低 |
+
+#### P2-4 版本化动态库
+
+| 项 | 内容 |
+| --- | --- |
+| 目标 | 共享库能按 soname 被加载，支持 rpath |
+| 交付物 | 配置字段 `version`、`soname`、`rpath`；产出 `libX.so.1.0.0` + 符号链接 |
+| 前置依赖 | 无 |
+| 验收 | `readelf -d` 中 SONAME 正确；按 soname 链接与加载可用 |
+| 风险 | 符号链接与 `clean` 的清理范围要一起处理 |
+
+### M3：构建能力补齐
+
+| 批次 | 目标 | 交付物 | 验收 |
+| --- | --- | --- | --- |
+| **P2-5 LTO** | 支持链接时优化 | 配置字段 `lto`；编译/链接加 `-flto`；归档与符号工具切到 `gcc-ar`/`gcc-nm`（`build_link_job`、`analyze_target` 同步改） | LTO 静态库可被链接成可执行文件（DESIGN 附录 A 已验证机制） |
+| **P2-6 PCH** | 大工程头文件预编译 | 配置字段 `pch: {header, language}`；生成 `.gch`、各 TU 加 `-include`、`.gch` 纳入 hash 跟踪 | 改头文件触发 PCH 重建与受影响 TU 重编，不漏编 |
+| **P2-7 安装与打包** | 生成可安装产物 | 配置字段 `install`；`antel install`；生成 `.pc` | 安装后 `pkg-config --cflags/--libs` 可用 |
+| **P2-8 工具包装** | 加速与分布式编译 | 配置字段 `wrapper`（如 `ccache`） | 包装器生效且不破坏依赖判定 |
+
+依赖关系：P2-7 依赖 P2-4（版本信息）与 P2-2（`.pc` 的 cflags/libs 拼装）；P2-5 与 P2-6 相互独立。
+
+### M4：生态互操作（可选）
+
+| 批次 | 目标 | 交付物 | 验收 |
+| --- | --- | --- | --- |
+| **P3-1 驱动既有 Makefile** | 让既有 make 工程用上 antel 的日志与产物分析 | `antel make -- <args>`：转交参数、接管输出/退出码/日志 | 退出码与 make 一致，日志落到 `log/` |
+| **P3-2 只读导入** | 展示既有工程的依赖图 | `make -p -n` 导出数据库后做**近似**还原 | 输出明确标注"近似、可能缺失动态目标" |
+
+## 4. 已完成的批次（Phase 0 复盘）
+
+**交付**：`antelope/build_plan.py`（`CompileUnit`/`LinkJob`/`BuildPlan`）、`Command.run_argv`、`Compiler.run_units`（线程池 + 失败即停）、`Linker.plan_response_file`、`compile_commands.json`、`os.system` 清零、`projectName` 白名单。
+
+**实测**：150 TU / 8 核，`jobs=1` 3.87s → `jobs=8` **1.11s**（3.5×）；串行与并行产物 sha256 一致；测试 3 → 9 条，含空格路径用例可复现旧实现缺陷（旧实现报 `cannot specify '-o' with '-c'`）。
+
+**偏差**：① `<1.0s` 未严格达成（1.11s），差值即 hash 判定开销（详见 DESIGN.md 实施记录）；② 文档中的 `build_plan()`/`render_commands()` 落地为 `build_compile_units()`/`CompileUnit.render()`。
+
+**遗留（不阻塞，择机清理）**：`Command.run(str)` 兼容入口无调用者；`Compiler`/`Linker` 的 `self.dir` 与 `Directory.walkDir` 已无使用；`<1.0s` 的可选优化（判定阶段并行/缓存）。
+
+## 5. 待决策项与阻塞关系
+
+| # | 决策 | 阻塞批次 | 我的建议 | 状态 |
+| --- | --- | --- | --- | --- |
+| 1 | make 支持做到哪一层：生成 Makefile / 并行后端 / 两者 / 只驱动现有 Makefile | P1-2、P1-3 | 先做"生成 Makefile"（M1）；"并行后端"已由 Phase 0 的线程池覆盖，`backend: make` 可作为可选项 | 待定 |
+| 2 | 增量权威：共享 `obj/` 还是分离目录 | P1-2 | 共享（Phase 0 已把依赖文件命名统一为 `x.o.d`，切换后端不必全量重编；`sync-baseline` 消除冗余） | 待定 |
+| 3 | Phase 2 优先级与取舍 | P2-* | 按 M2 → M3 顺序推进；M2 的四项都是日常高频 | 待定 |
+| 4 | gcc 最低版本与平台 | 全局 | 本机 11.4；LTO/响应文件/PCH 在 4.x 起即有；Windows/msvc 维持"编译可用、链接未实现" | 待定 |
+
+未决时按"建议"推进；若你的选择与建议不同，我按你的选择调整后续批次。
+
+## 6. 风险与熔断
+
+| 风险 | 触发信号 | 处置 |
+| --- | --- | --- |
+| 批次把问题带进主干 | 该批 CI 红 | 停下修好再开下一批，不叠加改动 |
+| make 与 antel 判定不一致 | 跨实现一致性测试失败 | 回到 DESIGN §3.3 讨论增量权威，必要时切到"分离目录"方案 |
+| make 侧依赖静默失效 | 改公共头后 make 计划重编数为 0 | 检查依赖文件命名与 `-include` 是否对齐（DESIGN §4.1） |
+| 覆盖用户手写的 Makefile | `gen-makefile` 目标已存在 | 生成文件带标记，遇无标记文件拒绝覆盖 |
+| 产物字节不可等价 | P1-4 断言二失败 | 退化为"目标文件字节等价 + 运行行为一致"，并在测试中说明 |
+| 推送受网络/代理影响 | `git push` 报 gnutls 错误 | 代理不可用时用一次性覆盖走直连（`git -c http.https://github.com.proxy= push`），不改动用户 git 配置 |
+
+## 7. 进度记录
+
+| 日期 | 批次 | 结果 | 提交 |
+| --- | --- | --- | --- |
+| 2026-09-16 | M0 / Phase 0 | 并行 3.5×、结构化解耦、`compile_commands.json`、注入面收口；CI 3.9/3.11/3.13 全绿 | `c6af1a0` |
+
+后续每完成一个批次，在此追加一行，并在 DESIGN.md 对应阶段追加实施记录。
