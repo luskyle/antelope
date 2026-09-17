@@ -57,41 +57,105 @@ class Analyzor():
         }
 
     def resource_info(self, antel) -> dict:
-        """资源情况：data_files 复制项、gresource 清单、embed 嵌入项（配置了才有）"""
-        info = {'data_files': [], 'gresource': None, 'embeds': []}
+        """
+        资源明细：把每个资源文件展开成一行独立分析。
+        行字段：形态 / 资源路径 / 类型（file 探测）/ 大小 / 状态 / 详情。
+        """
+        rows = []
 
+        # ---- data_files：目录整体复制时展开到文件级 ----
         for entry in getattr(antel, 'data_files', []):
             source = entry['from']
             target = f'{self.output_dir}/{entry["to"]}'
-            info['data_files'].append({
-                'from': source,
-                'to': entry['to'],
-                'exists': os.path.exists(target),
-                'is_dir': os.path.isdir(target),
-            })
+            target_exists = os.path.exists(target)
 
+            files = []
+            if os.path.isdir(source):
+                for root, dirs, names in os.walk(source):
+                    for name in sorted(names):
+                        full = os.path.join(root, name)
+                        rel = os.path.relpath(full, source)
+                        files.append({'rel': rel, 'source': full,
+                                      'copied': os.path.exists(f'{self.output_dir}/{entry["to"]}/{rel}')})
+            else:
+                files.append({'rel': os.path.basename(source), 'source': source,
+                              'copied': target_exists and os.path.isfile(target)})
+
+            if not files:
+                rows.append(self._resource_row('data_files', source, '—',
+                                               '目录为空', '未复制', ''))
+                continue
+
+            for item in files:
+                kind, size = self._probe(item['source'])
+                state = '✓ 已复制' if item['copied'] else '✗ 未复制'
+                target_path = f'{entry["to"]}/{item["rel"]}'
+                detail = f'复制到 {target_path}'
+                rows.append(self._resource_row('data_files', item['rel'], kind, size, state, detail))
+
+        # ---- gresource：XML 与每个引用文件分开 ----
         if getattr(antel, 'gresource', '') != '':
-            generated = f'{self.output_dir}/gresource.c'
-            inputs = antel.resource.gresource_inputs() if hasattr(antel.resource, 'gresource_inputs') else []
-            # gresource_inputs 含 xml 自身，报告里单独展示 xml，这里只列引用文件
-            inputs = [os.path.basename(p) for p in inputs if p != antel.gresource]
-            info['gresource'] = {
-                'xml': antel.gresource,
-                'inputs': inputs,
-                'generated_size': os.path.getsize(generated) if os.path.exists(generated) else 0,
-                'generated_exists': os.path.exists(generated),
-            }
+            xml_kind, xml_size = self._probe(antel.gresource)
+            rows.append(self._resource_row('gresource', antel.gresource, xml_kind, xml_size,
+                                           '✓ XML 存在' if os.path.exists(antel.gresource) else '✗ XML 缺失',
+                                           '资源清单'))
 
+            generated = f'{self.output_dir}/gresource.c'
+            generated_ok = os.path.exists(generated)
+            inputs = antel.resource.gresource_inputs() if hasattr(antel.resource, 'gresource_inputs') else []
+            for path in inputs:
+                if path == antel.gresource:
+                    continue
+                kind, size = self._probe(path)
+                detail = f'前缀 {self._gresource_prefix(antel.gresource)}（未编译前资源文件）'
+                rows.append(self._resource_row('gresource', os.path.basename(path), kind, size,
+                                               '✓ 已编入' if generated_ok else '✗ 未生成',
+                                               detail))
+            if generated_ok:
+                rows.append(self._resource_row('gresource', 'gresource.c', 'C 源码',
+                                               os.path.getsize(generated), '✓ 生成物',
+                                               '编译进可执行文件（单文件分发）'))
+
+        # ---- embed：每个嵌入文件一行 ----
         for index, embed in enumerate(getattr(antel, 'embeds', [])):
             obj = f'{self.output_dir}/obj/embed_{index}.o'
-            info['embeds'].append({
-                'file': embed,
-                'size': os.path.getsize(embed) if os.path.exists(embed) else 0,
-                'exists': os.path.exists(embed),
-                'obj_exists': os.path.exists(obj),
-                'symbol': symbol_name(embed),
-            })
-        return info
+            kind, size = self._probe(embed)
+            state = '✓ 已嵌入' if os.path.exists(obj) else \
+                    ('✗ 未嵌入' if os.path.exists(embed) else '✗ 源缺失')
+            rows.append(self._resource_row('embed', embed, kind, size, state,
+                                           f'符号 {symbol_name(embed)}'))
+
+        return rows
+
+    def _resource_row(self, form:str, path:str, kind, size, state:str, detail:str) -> dict:
+        return {'form': form, 'path': path, 'kind': kind,
+                'size': size, 'state': state, 'detail': detail}
+
+    def _probe(self, path:str):
+        """文件类型（file 命令首段）与大小；缺失时返回 ('—', 0)"""
+        if not os.path.exists(path) or not os.path.isfile(path):
+            return '—', 0
+        size = os.path.getsize(path)
+        kind = ''
+        try:
+            out = self.command.run_argv(['file', '-b', '-L', path], capture=True)
+            kind = out.strip().split(',')[0] if out.strip() else ''
+        except Exception:
+            pass
+        return kind, size
+
+    def _gresource_prefix(self, xml:str) -> str:
+        """从 gresource.xml 里读 <gresource prefix>，找不到给个通用说明"""
+        try:
+            import xml.etree.ElementTree as ET
+            root = ET.parse(xml).getroot()
+            for g in root.iter('gresource'):
+                prefix = g.get('prefix')
+                if prefix:
+                    return prefix
+        except Exception:
+            pass
+        return 'gresource://'
 
     def target_path(self, antel) -> str:
         """当前配置的生成目标路径（exe / 静态库 / 共享库）"""
@@ -330,43 +394,39 @@ def object_bar(objects:list) -> str:
     return rows
 
 
-def resource_section(resources:dict) -> str:
-    """资源情况区块：data_files / gresource / embed，配置了哪个展示哪个"""
-    if not (resources['data_files'] or resources['gresource'] or resources['embeds']):
+def resource_section(rows:list) -> str:
+    """资源明细表：每个资源文件一行（形态 / 路径 / 类型 / 大小 / 状态 / 详情）"""
+    if not rows:
         return ''
 
-    rows = ''
+    def scaled(size) -> str:
+        if size < 1024:
+            return f'{size} B'
+        if size < 1024 * 1024:
+            return f'{size / 1024:.1f} KB'
+        return f'{size / (1024 * 1024):.2f} MB'
 
-    # data_files：目录分发
-    for item in resources['data_files']:
-        state = ('<span class="ok">✓ 已复制</span>' if item['exists']
-                 else '<span class="warn">✗ 未复制（构建后才有）</span>')
-        kind = '目录' if item['is_dir'] else '文件'
-        rows += (f'<tr><td>data_files</td>'
-                 f'<td>{kind}：<code>{esc(item["from"])}</code> → <code>{esc(item["to"])}</code>{state}</td></tr>')
+    trs = ''
+    for r in rows:
+        state_class = 'ok' if r['state'].startswith('✓') else 'warn'
+        trs += (f'<tr>'
+                f'<td class="name">{esc(r["form"])}</td>'
+                f'<td class="mono small">{esc(r["path"])}</td>'
+                f'<td class="small">{esc(r["kind"])}</td>'
+                f'<td>{scaled(r["size"])}</td>'
+                f'<td class="{state_class}">{esc(r["state"])}</td>'
+                f'<td class="small">{esc(r["detail"])}</td>'
+                f'</tr>')
 
-    # gresource：单文件分发
-    if resources['gresource']:
-        g = resources['gresource']
-        inputs = ' '.join(f'<code>{esc(f)}</code>' for f in g['inputs'])
-        state = ('<span class="ok">✓ 已编入</span>' if g['generated_exists']
-                 else '<span class="warn">✗ 未生成</span>')
-        size_desc = f'，生成 <code>gresource.c</code> 共 {g["generated_size"]} 字节' if g['generated_exists'] else ''
-        rows += (f'<tr><td>gresource</td>'
-                 f'<td>XML：<code>{esc(g["xml"])}</code> 引用文件：{inputs}{size_desc}{state}</td></tr>')
-
-    # embed：单文件分发
-    for item in resources['embeds']:
-        state = ('<span class="ok">✓ 已嵌入</span>' if item['obj_exists']
-                 else ('<span class="warn">✗ 未嵌入</span>' if item['exists'] else '<span class="warn">✗ 源缺失</span>'))
-        rows += (f'<tr><td>embed</td>'
-                 f'<td><code>{esc(item["file"])}</code>（{item["size"]} 字节）'
-                 f'符号 <code>{esc(item["symbol"])}</code>{state}</td></tr>')
+    forms = sorted({r['form'] for r in rows})
+    total = sum(r['size'] for r in rows if r['path'] != 'gresource.c')
+    summary = ' · '.join(f'<code>{esc(f)}</code> {sum(1 for r in rows if r["form"] == f)} 项' for f in forms)
 
     return (f'  <h2>资源情况</h2>\n'
+            f'  <div class="sub">共 {len(rows)} 个资源文件 · 资源总体积 {scaled(total)} · {summary}</div>\n'
             f'  <table>\n'
-            f'    <tr><th>形态</th><th>详情</th></tr>\n'
-            f'    {rows}\n'
+            f'    <tr><th>形态</th><th>资源</th><th>类型</th><th>大小</th><th>状态</th><th>详情</th></tr>\n'
+            f'    {trs}\n'
             f'  </table>')
 
 
