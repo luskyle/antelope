@@ -321,6 +321,27 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 
 **本批未做（留待 P1-3）**：`backend` 的 `auto` 默认值、make 缺失时的自动回退与提示、从 make 内部调用 antel 时的 jobserver 透传。
 
+#### P1-3 实施记录（已完成，2026-09-17）
+
+交付内容：
+
+| 项 | 落点 |
+| --- | --- |
+| `auto` 默认与回退 | `backend` 默认改为 `auto`；`Antelope.resolveBackend` 缺 make 时回退内置执行器并提示 |
+| 摘要可读性 | `describeBackend`：摘要里直接标出实际执行器（`auto → make` / `auto → antel（未找到 make）`） |
+| 被 make 调用 | `MakeRunner.buildArgv` 在有 `MAKEFLAGS` 时**不传 `-j`**；内置执行器由 `Antelope.executorJobs` 退回 `jobs=1` |
+
+实测结果：
+
+| 场景 | 结果 |
+| --- | --- |
+| 缺 make（PATH 里没有 make，其余工具齐全） | 回退成功，摘要显示 `auto → antel（未找到 make）`，产物与走 make 时**字节一致** |
+| 三种取值 `auto` / `make` / `antel` | 均按预期选择执行器；`antel` 时不生成规则文件 |
+| `MAKEFLAGS` 存在时 | 内置执行器返回 `jobs=1`（单测断言）；make 执行器的 argv 不含 `-j`（单测断言） |
+| 测试总数 | 14 → **18** 条 |
+
+**已知限制（本批不做，留待专门批次）**：make 的 jobserver 管道不会穿透 antel 传给子 make —— Python 启动子进程时默认关闭继承的 fd，因此嵌套 make 会打印 `jobserver 不可用: 正使用 -j1` 并串行执行（实测：父规则带 `+` 也一样）。这是**安全方向**的降级（绝不超额并行），代价是该层失去并行。后续做法：把 `--jobserver-auth=3,4` 里的 fd 透传给子进程（需先 dup 并用 FIFO 校验以防误传，否则子 make 可能阻塞在错误的管道上），或依赖 make ≥ 4.4 的 fifo 风格（无需 fd）。本机 make 为 4.3（pipe 风格），fifo 路径无法在本机验证，故本批不动。
+
 ### Phase 2：gcc 能力面补齐（4-6 天）
 
 | 能力            | 实现要点                                                                                                   | 验收                                                    |

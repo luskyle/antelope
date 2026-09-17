@@ -1,5 +1,6 @@
 import os
 import shlex
+import shutil
 
 from antelope.build_plan import *
 from antelope.errors import *
@@ -8,6 +9,14 @@ from antelope.os_ops.command import *
 RULE_FILE_NAME = 'antel.mk'
 GENERATED_MARKER = '# 由 antel 生成，请勿手改（每次构建重建；它不是交付物，只是 make 的输入）'
 RECIPE_INDENT = '\t'
+
+def makeAvailable():
+    """机器上是否有 make"""
+    return shutil.which('make') is not None
+
+def parentMakeFlags():
+    """若当前进程由 make 调用，返回它继承的 MAKEFLAGS，否则返回空串"""
+    return os.environ.get('MAKEFLAGS', '').strip()
 
 def ruleFilePath(output_dir:str):
     """内部规则文件的位置：与 log/<项目名>_link.sh 同构，凡真正执行的东西一律落盘留档"""
@@ -71,7 +80,7 @@ class MakeRunner():
 
         self.removeStaleObjects(stale_objs)
 
-        argv = ['make', '-f', path, f'-j{max(1, self.jobs)}'] + list(stale_objs)
+        argv = self.buildArgv(path, stale_objs)
         log_file = f'{self.output_dir}/log/{self.project_name}.make'
         try:
             self.command.run_argv(argv, redirect_to=log_file, echo=True)
@@ -79,6 +88,19 @@ class MakeRunner():
             raise CommandError(error.command, error.return_code, error.output,
                             reason=f'make 执行失败，规则文件：{path}')
         return path
+
+    def buildArgv(self, rule_path:str, stale_objs:list):
+        """
+        组装 make 命令行。
+        由 make 调用时不再传 -j：让 MAKEFLAGS 里的并行度/jobserver 生效，
+        否则会覆盖外层的预算。实测：父 make -j4 时子 make 继承
+        'MAKEFLAGS= -j4 --jobserver-auth=3,4'；父规则带 '+' 才共享 jobserver，
+        不带则 make 自身告警并退回 -j1
+        """
+        argv = ['make', '-f', rule_path]
+        if parentMakeFlags() == '':
+            argv.append(f'-j{max(1, self.jobs)}')
+        return argv + list(stale_objs)
 
     def removeStaleObjects(self, stale_objs:list):
         """

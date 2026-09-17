@@ -7,6 +7,8 @@ import pytest
 from click.testing import CliRunner
 
 from antelope.antelope import main
+from antelope.antelope import Antelope, describeBackend
+from antelope.makefile import MakeRunner
 
 pytestmark = pytest.mark.skipif(shutil.which('gcc') is None or shutil.which('g++') is None,
                                 reason='需要 gcc/g++ 才能执行真实构建')
@@ -241,3 +243,57 @@ def test_make_backend_failure_exits_nonzero(project):
     assert '规则文件' in result.output
     assert '链接完毕' not in result.output
     assert not (project / 'demo_antel' / 'demo').exists()
+
+
+def test_auto_backend_uses_make(project):
+    """backend 默认 auto：机器上有 make 就走 make"""
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+
+    assert (project / 'demo_antel' / 'log' / 'antel.mk').exists()
+    assert run_program(project) == 'foo1 bar1'
+
+
+def test_auto_backend_falls_back_without_make(project, monkeypatch):
+    """
+    没有 make 时 auto 回退到内置执行器，且产物与走 make 时一致。
+    注意 Console.WriteNotice 走 prompt_toolkit，不进入 CliRunner 的捕获，
+    因此这里断言行为（规则文件是否生成、产物是否一致），不断言提示文本
+    """
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+    with_make = (project / 'demo_antel' / 'demo').read_bytes()
+    assert (project / 'demo_antel' / 'log' / 'antel.mk').exists()
+
+    monkeypatch.setattr('antelope.antelope.makeAvailable', lambda: False)
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+
+    # rebuild 会重建 log/，规则文件不再出现即说明没有走 make
+    assert not (project / 'demo_antel' / 'log' / 'antel.mk').exists()
+    assert (project / 'demo_antel' / 'demo').read_bytes() == with_make
+    assert describeBackend('auto') == 'auto → antel（未找到 make）'
+
+
+def test_builtin_executor_serializes_under_make(monkeypatch):
+    """被 make 调用时内置执行器退回串行；make 执行器交给 MAKEFLAGS 自己处理"""
+    antel = Antelope()
+    antel.jobs = 8
+
+    monkeypatch.setattr('antelope.antelope.parentMakeFlags', lambda: '-j4 --jobserver-auth=3,4')
+    assert antel.executorJobs('antel') == 1
+    assert antel.executorJobs('make') == 8
+
+    monkeypatch.setattr('antelope.antelope.parentMakeFlags', lambda: '')
+    assert antel.executorJobs('antel') == 8
+
+
+def test_make_argv_respects_parent_makeflags(monkeypatch):
+    """被 make 调用时不传 -j，把并行度交给 MAKEFLAGS 与 jobserver"""
+    runner = MakeRunner('out', 'demo', jobs=8)
+
+    monkeypatch.setattr('antelope.makefile.parentMakeFlags', lambda: '')
+    assert '-j8' in runner.buildArgv('out/log/antel.mk', ['out/obj/a.o'])
+
+    monkeypatch.setattr('antelope.makefile.parentMakeFlags', lambda: '-j4 --jobserver-auth=3,4')
+    argv = runner.buildArgv('out/log/antel.mk', ['out/obj/a.o'])
+
+    assert not any(item.startswith('-j') for item in argv)
+    assert argv == ['make', '-f', 'out/log/antel.mk', 'out/obj/a.o']

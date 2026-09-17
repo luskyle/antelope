@@ -20,7 +20,7 @@ from antelope.cli.console import *
 from antelope.runner import *
 
 DEFAULT_JOBS = min(8, os.cpu_count() or 1)
-BACKENDS = ('antel', 'make')
+BACKENDS = ('auto', 'make', 'antel')
 RESPONSE_FILE_MODES = ('auto', 'always', 'never')
 GENERATED_TARGETS = ['*.a', '*.so']
 
@@ -35,7 +35,7 @@ class Antelope:
         self.link_args_list = []
         self.analyze_files = []
         self.jobs = DEFAULT_JOBS
-        self.backend = 'antel'
+        self.backend = 'auto'
         self.compile_commands = True
         self.response_file = 'auto'
 
@@ -137,7 +137,12 @@ class Antelope:
         按 backend 选择执行器。无论走哪条路，都由 antel 决定"编什么"，
         make 只负责把它们并行编完（DESIGN §3.2）
         """
-        if self.backend == 'make':
+        backend = self.resolveBackend()
+        jobs = self.executorJobs(backend)
+        self.compiler.jobs = jobs
+        self.make_runner.jobs = jobs
+
+        if backend == 'make':
             plan = self.buildMakePlan()
             stale = set(stale_sources)
             stale_objs = [unit.obj for unit in plan.units
@@ -149,6 +154,31 @@ class Antelope:
             self.compiler.compile(self.get_project_source())
         else:
             self.compiler.compile(stale_sources)
+
+    def resolveBackend(self):
+        """auto：优先用 make，机器上没有 make 时回退内置执行器并提示"""
+        if self.backend != 'auto':
+            return self.backend
+
+        if makeAvailable():
+            return 'make'
+
+        self.console.WriteNotice('未找到 make，回退到内置执行器（backend: auto）')
+        return 'antel'
+
+    def executorJobs(self, backend:str):
+        """
+        被 make 调用时不在内部再叠加并行：内置执行器无法共享 make 的 jobserver，
+        退回串行；make 执行器交给 MAKEFLAGS 自己处理（见 MakeRunner.buildArgv）
+        """
+        if backend == 'make':
+            return self.jobs
+
+        flags = parentMakeFlags()
+        if flags != '':
+            self.console.WriteNotice(f'检测到由 make 调用（MAKEFLAGS={flags}），内置执行器改为串行（jobs=1）')
+            return 1
+        return self.jobs
 
     def buildMakePlan(self):
         """本轮构建的完整计划：全部编译单元（make 需要每个单元的规则）+ 链接作业（供手工 make 使用）"""
@@ -201,11 +231,20 @@ def readResponseFile(config:dict):
     return value
 
 def readBackend(config:dict):
-    """执行器：antel（内置线程池）/ make（调用 make 工具，仍由 antel 决定编什么）"""
-    value = str(config.get('backend', 'antel')).lower()
+    """执行器：auto（默认：优先 make，缺 make 时回退）/ make / antel"""
+    value = str(config.get('backend', 'auto')).lower()
     if value not in BACKENDS:
         raise ConfigError(f'backend 取值非法：{value}，可选 ' + '、'.join(BACKENDS))
     return value
+
+def describeBackend(backend:str):
+    """把 auto 解析成实际会用的执行器，便于在配置摘要里一眼看到"""
+    if backend != 'auto':
+        return backend
+
+    if makeAvailable():
+        return 'auto → make'
+    return 'auto → antel（未找到 make）'
 
 def readProjectName(config:dict):
     """
@@ -270,7 +309,7 @@ def parseJsonConfig(file:str='antel'):
     antel.backend = readBackend(config)
     antel.compile_commands = readBool(config, 'compile_commands', True)
     antel.response_file = readResponseFile(config)
-    print(f'并行度：{antel.jobs}  执行器：{antel.backend}  compile_commands.json：'
+    print(f'并行度：{antel.jobs}  执行器：{describeBackend(antel.backend)}  compile_commands.json：'
         + ('开启' if antel.compile_commands else '关闭'))
 
     antel.flushSetting()
