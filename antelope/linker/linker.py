@@ -15,7 +15,8 @@ class Linker():
                 include_directories_global:list=[], target_type_global:TargetType=TargetType.Static,
                 compiler_global:CompilerType=CompilerType.gxx, compiler_args_list_global:list=[],
                 link_args_list_global:list=[], output_dir:str='.', response_file:str='auto',
-                pkg_libs:list=[], sanitize:list=[], coverage:bool=False):
+                pkg_libs:list=[], sanitize:list=[], coverage:bool=False,
+                version:str='', soname:str='', rpath:list=[]):
         self.project_name = project_name_global
         self.source = list(source_global)
         self.include_directories = list(include_directories_global)
@@ -28,6 +29,9 @@ class Linker():
         self.pkg_libs = list(pkg_libs)
         self.sanitize = list(sanitize)
         self.coverage = coverage
+        self.version = version
+        self.soname = soname
+        self.rpath = list(rpath)
 
         self.dir = Directory()
         self.log = Log(output_dir)
@@ -50,9 +54,48 @@ class Linker():
                             redirect_to=f'{self.output_dir}/log/linkInfor', echo=True)
         print('链接完毕')
 
+        self.create_version_links()
+
         print('优化生成目标...')
         self.analyze_target()
         print('优化完毕')
+
+    def create_version_links(self):
+        """版本化共享库的符号链接：libX.so.1 → libX.so.1.0.0，libX.so → libX.so.1"""
+        if self.target_type != TargetType.Shared or self.version == '':
+            return
+
+        base = f'{self.output_dir}/lib{self.project_name}'
+        real = f'{base}.so.{self.version}'
+        # 用户给的 soname 可能是相对名（libcustom.so.2），统一落到输出目录下
+        links = [f'{self.output_dir}/{self.soname}'] if self.soname != '' else []
+
+        major = self.version.partition('.')[0]
+        major_link = f'{base}.so.{major}'
+        if major_link != real and major_link not in links:
+            links.append(major_link)
+        if f'{base}.so' not in links and f'{base}.so' != real:
+            links.append(f'{base}.so')
+
+        if not os.path.exists(real):
+            raise CommandError(f'{self.project_name}_link.sh 未产出 {real}',
+                               return_code=1, reason='版本化动态库链接结果缺失')
+
+        for link in links:
+            if os.path.exists(link) or os.path.islink(link):
+                os.remove(link)
+            os.symlink(os.path.basename(real), link)
+            print(f'符号链接：{link} -> {os.path.basename(real)}')
+
+    def shared_lib_path(self):
+        """共享库实际产出路径：配置了 version 就是 libX.so.<版本>，否则 libX.so"""
+        if self.version != '':
+            return f'{self.output_dir}/lib{self.project_name}.so.{self.version}'
+        return f'{self.output_dir}/lib{self.project_name}.so'
+
+    def rpath_args(self):
+        """rpath 链接参数：每个路径一条 -Wl,-rpath,<path>"""
+        return [f'-Wl,-rpath,{path}' for path in self.rpath]
 
     def collect_objects(self):
         """收集 obj/ 下所有目标文件（依赖文件不以 .o 结尾，天然被排除）"""
@@ -70,24 +113,31 @@ class Linker():
             args = ['csr', f'{self.output_dir}/lib{self.project_name}.a'] + objs
         elif self.target_type == TargetType.Shared:
             driver = self.link_driver()
-            args = ['-shared', '-o', f'{self.output_dir}/lib{self.project_name}.so'] + objs
+            output = self.shared_lib_path()
+            args = ['-shared', '-o', output] + objs
+            # 版本化共享库：链接标上 soname（运行时按它查找，与文件名解耦）
+            if self.version != '':
+                soname = self.soname if self.soname != '' else f'lib{self.project_name}.so.{self.version.partition(".")[0]}'
+                args += ['-Wl,-soname,' + soname]
             args += ['-lm'] + self.external.link_system_args + self.external.link_user_args
             args += self.pkg_libs
         else:
             driver = self.link_driver()
+            output = f'{self.output_dir}/{self.project_name}'
             args = ['-s'] + objs
-            args += ['-o', f'{self.output_dir}/{self.project_name}', '-Wl,--add-needed', '-lc', '-lm']
+            args += ['-o', output, '-Wl,--add-needed', '-lc', '-lm']
             args += list(compile_args) + self.external.link_system_args + self.external.link_user_args
             args += self.pkg_libs
 
-        # 消毒器与覆盖率：链接阶段必须带上工具链的运行时
+        # 消毒器、覆盖率与 rpath：链接阶段必须带上的运行时/查找路径
         if driver != 'ar':
             args += self.sanitize_args()
             if self.coverage:
                 args += ['--coverage']
+            args += self.rpath_args()
 
         return LinkJob(driver=driver, args=args,
-                    output=f'{self.output_dir}/{self.project_name}',
+                    output=output,
                     response_file=self.plan_response_file(driver, args))
 
     def sanitize_args(self):
@@ -126,10 +176,11 @@ class Linker():
         log_dir = f'{self.output_dir}/log'
 
         if self.target_type == TargetType.Shared:
-            target = f'{self.output_dir}/lib{self.project_name}.so'
-            self.command.run_argv(['readelf', '-a', target], redirect_to=f'{log_dir}/readelf_lib{self.project_name}.so.txt')
-            self.command.run_argv(['ldd', target], redirect_to=f'{log_dir}/ldd_lib{self.project_name}.so.txt')
-            self.command.run_argv(['nm', '-ACD', target], redirect_to=f'{log_dir}/nm_lib{self.project_name}.so.txt')
+            target = self.shared_lib_path()
+            stem = os.path.basename(target)
+            self.command.run_argv(['readelf', '-a', target], redirect_to=f'{log_dir}/readelf_{stem}.txt')
+            self.command.run_argv(['ldd', target], redirect_to=f'{log_dir}/ldd_{stem}.txt')
+            self.command.run_argv(['nm', '-ACD', target], redirect_to=f'{log_dir}/nm_{stem}.txt')
         elif self.target_type == TargetType.Static:
             target = f'{self.output_dir}/lib{self.project_name}.a'
             self.command.run_argv(['nm', '-g', target], redirect_to=f'{log_dir}/symbol_lib{self.project_name}.a.txt')

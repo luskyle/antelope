@@ -25,7 +25,7 @@ from antelope.runner import *
 DEFAULT_JOBS = min(8, os.cpu_count() or 1)
 BACKENDS = ('auto', 'make', 'antel')
 RESPONSE_FILE_MODES = ('auto', 'always', 'never')
-GENERATED_TARGETS = ['*.a', '*.so']
+GENERATED_TARGETS = ['*.a', '*.so', '*.so.*']
 
 class Antelope:
     def __init__(self):
@@ -44,6 +44,9 @@ class Antelope:
         self.pkg_config = []
         self.sanitize = []
         self.coverage = False
+        self.version = ''
+        self.soname = ''
+        self.rpath = []
         self.data_files = []
         self.gresource = ''
         self.embeds = []
@@ -77,7 +80,8 @@ class Antelope:
                             self.compiler_type, self.compile_args_list,
                             self.link_args_list, self.output_dir,
                             self.response_file, pkg_libs,
-                            self.sanitize, self.coverage)
+                            self.sanitize, self.coverage,
+                            self.version, self.soname, self.rpath)
         self.linker = linkerObj
 
         runnerObj = Runner(self.project_name, self.source,
@@ -284,6 +288,32 @@ def resolvePkgConfig(packages:list):
         libs += shlex.split(Command().run_argv([pkg_config, '--libs', package], capture=True))
     return cflags, libs
 
+def readVersion(config:dict):
+    """
+    版本化共享库的版本号，形如 "1.0.0"。配置了它就产出 libX.so.<版本> 并生成软链。
+    只允许字母、数字、点与连字符（会进入文件名与 soname）
+    """
+    value = str(config.get('version', '')).strip()
+    if value == '':
+        return ''
+    if not re.fullmatch(r'[\w.-]+', value):
+        raise ConfigError(f'version 只能含字母、数字、下划线、点与连字符，当前为：{value}')
+    return value
+
+
+def readSoname(config:dict):
+    """
+    共享库 soname，形如 "libX.so.1"。不配时由 version 的主版本号推导；
+    version 未配置而 soname 已配置同样合法（只设 soname 不设版本）
+    """
+    value = str(config.get('soname', '')).strip()
+    if value == '':
+        return ''
+    if not re.fullmatch(r'[\w./+-]+', value):
+        raise ConfigError(f'soname 只能含字母、数字、点、斜杠、下划线与连字符，当前为：{value}')
+    return value
+
+
 def describeBackend(backend:str):
     """把 auto 解析成实际会用的执行器，便于在配置摘要里一眼看到"""
     if backend != 'auto':
@@ -359,6 +389,9 @@ def parseJsonConfig(file:str='antel'):
     antel.pkg_config = readList(config, 'pkg_config')
     antel.sanitize = readList(config, 'sanitize')
     antel.coverage = readBool(config, 'coverage', False)
+    antel.version = readVersion(config)
+    antel.soname = readSoname(config)
+    antel.rpath = readList(config, 'rpath')
     antel.data_files = readDataFiles(config)
     antel.gresource = readGresource(config)
     antel.embeds = readEmbeds(config)
