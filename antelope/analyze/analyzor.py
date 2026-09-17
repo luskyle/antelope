@@ -380,8 +380,17 @@ def flag_table(counts:dict) -> str:
     return rows
 
 
+def scaled(size:int) -> str:
+    """文件大小的人类可读表示：B / KB / MB"""
+    if size < 1024:
+        return f'{size} B'
+    if size < 1024 * 1024:
+        return f'{size / 1024:.1f} KB'
+    return f'{size / (1024 * 1024):.2f} MB'
+
+
 def object_bar(objects:list) -> str:
-    """目标文件大小条形图（纯 CSS）"""
+    """目标文件大小条形图（纯 CSS），右侧标注带单位的大小"""
     if not objects:
         return '<div class="sub">无目标文件</div>'
     max_size = max(item['size'] for item in objects) or 1
@@ -390,7 +399,7 @@ def object_bar(objects:list) -> str:
         pct = int(item['size'] * 100 / max_size)
         rows += (f'<div class="bar-row"><span class="bar-name">{esc(item["name"])}</span>'
                  f'<div class="bar-track"><div class="bar-fill" style="width:{pct}%"></div></div>'
-                 f'<span class="bar-size">{item["size"]}</span></div>')
+                 f'<span class="bar-size">{scaled(item["size"])}</span></div>')
     return rows
 
 
@@ -398,13 +407,6 @@ def resource_section(rows:list) -> str:
     """资源明细表：每个资源文件一行（形态 / 路径 / 类型 / 大小 / 状态 / 详情）"""
     if not rows:
         return ''
-
-    def scaled(size) -> str:
-        if size < 1024:
-            return f'{size} B'
-        if size < 1024 * 1024:
-            return f'{size / 1024:.1f} KB'
-        return f'{size / (1024 * 1024):.2f} MB'
 
     trs = ''
     for r in rows:
