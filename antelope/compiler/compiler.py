@@ -38,10 +38,14 @@ class Compiler():
 
     def compile(self, input_src:list):
         units = self.build_compile_units(input_src)
-        self.log.writeLogfile([unit.render() + '\n' for unit in units],
-                            self.project_name + '.' + self.compiler_type.name)
+        self.log_compile_units(units)
         self.write_compile_commands(units)
         self.run_units(units)
+
+    def log_compile_units(self, units:list):
+        """把本轮编译命令记进审计日志（内置执行器与 make 执行器共用）"""
+        self.log.writeLogfile([unit.render() + '\n' for unit in units],
+                            self.project_name + '.' + self.compiler_type.name)
 
     def build_compile_units(self, input_src:list):
         """把本轮要编译的源文件展开成带结构化参数的编译单元"""

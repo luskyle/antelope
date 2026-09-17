@@ -13,12 +13,14 @@ from antelope.args_parser.external import *
 from antelope.args_parser.external_json import *
 from antelope.compiler.compiler import *
 from antelope.linker.linker import *
+from antelope.makefile import *
 from antelope.analyze.analyzor import *
 from antelope.cli.init_json import *
 from antelope.cli.console import *
 from antelope.runner import *
 
 DEFAULT_JOBS = min(8, os.cpu_count() or 1)
+BACKENDS = ('antel', 'make')
 RESPONSE_FILE_MODES = ('auto', 'always', 'never')
 GENERATED_TARGETS = ['*.a', '*.so']
 
@@ -33,6 +35,7 @@ class Antelope:
         self.link_args_list = []
         self.analyze_files = []
         self.jobs = DEFAULT_JOBS
+        self.backend = 'antel'
         self.compile_commands = True
         self.response_file = 'auto'
 
@@ -65,6 +68,8 @@ class Antelope:
                             self.compiler_type, self.compile_args_list,
                             self.link_args_list, self.output_dir)
         self.runner = runnerObj
+
+        self.make_runner = MakeRunner(self.output_dir, self.project_name, self.jobs)
 
         self.analyzor = Analyzor(self.output_dir)
 
@@ -112,7 +117,7 @@ class Antelope:
 
         self.dir.RemoveFiles(self.output_dir, GENERATED_TARGETS)
 
-        self.compiler.compile(stale_sources)
+        self.compileSources(stale_sources)
         self.linker.link()
         self.save_baseline()
 
@@ -123,9 +128,38 @@ class Antelope:
         self.dir.ClearMakeDirectory(f"{self.output_dir}/obj/")
         self.dir.ClearMakeDirectory(f"{self.output_dir}/log/")
 
-        self.compiler.compile(self.get_project_source())
+        self.compileSources([], rebuild=True)
         self.linker.link()
         self.save_baseline()
+
+    def compileSources(self, stale_sources:list, rebuild:bool=False):
+        """
+        按 backend 选择执行器。无论走哪条路，都由 antel 决定"编什么"，
+        make 只负责把它们并行编完（DESIGN §3.2）
+        """
+        if self.backend == 'make':
+            plan = self.buildMakePlan()
+            stale = set(stale_sources)
+            stale_objs = [unit.obj for unit in plan.units
+                        if rebuild or unit.source in stale]
+            self.make_runner.run(plan, stale_objs)
+            return
+
+        if rebuild:
+            self.compiler.compile(self.get_project_source())
+        else:
+            self.compiler.compile(stale_sources)
+
+    def buildMakePlan(self):
+        """本轮构建的完整计划：全部编译单元（make 需要每个单元的规则）+ 链接作业（供手工 make 使用）"""
+        units = self.compiler.build_compile_units(self.get_project_source())
+        self.compiler.log_compile_units(units)
+        self.compiler.write_compile_commands(units)
+
+        self.linker.external.parse_link_args()
+        link_job = self.linker.build_link_job([unit.obj for unit in units],
+                                            self.linker.external.parse_compile_args())
+        return BuildPlan(units=units, link=link_job, jobs=self.jobs, backend=self.backend)
 
     def link(self):
         self.linker.link()
@@ -164,6 +198,13 @@ def readResponseFile(config:dict):
     value = str(config.get('response_file', 'auto')).lower()
     if value not in RESPONSE_FILE_MODES:
         raise ConfigError(f'response_file 取值非法：{value}，可选 ' + '、'.join(RESPONSE_FILE_MODES))
+    return value
+
+def readBackend(config:dict):
+    """执行器：antel（内置线程池）/ make（调用 make 工具，仍由 antel 决定编什么）"""
+    value = str(config.get('backend', 'antel')).lower()
+    if value not in BACKENDS:
+        raise ConfigError(f'backend 取值非法：{value}，可选 ' + '、'.join(BACKENDS))
     return value
 
 def readProjectName(config:dict):
@@ -226,9 +267,11 @@ def parseJsonConfig(file:str='antel'):
     antel.analyze_files = readList(config, 'analyze_files')
 
     antel.jobs = readJobs(config)
+    antel.backend = readBackend(config)
     antel.compile_commands = readBool(config, 'compile_commands', True)
     antel.response_file = readResponseFile(config)
-    print(f'并行度：{antel.jobs}  compile_commands.json：' + ('开启' if antel.compile_commands else '关闭'))
+    print(f'并行度：{antel.jobs}  执行器：{antel.backend}  compile_commands.json：'
+        + ('开启' if antel.compile_commands else '关闭'))
 
     antel.flushSetting()
     print('--------------------------------------------------')

@@ -13,12 +13,13 @@
 | link_args           | 字符串数组 | 否   | 传给链接器的链接参数，如 `["-ldl"]`，只能是字符串数组                |
 | analyze_files       | 字符串数组 | 否   | `antel analyze` 要分析的目标文件所对应的源文件                       |
 | jobs                | 整数       | 否   | 并行编译的单元数，默认 `min(8, CPU 核数)`；填 `1` 即串行             |
+| backend             | 字符串     | 否   | 执行编译的工具，`antel`（默认，内置并行执行器）／`make`（调用 make 工具） |
 | compile_commands    | 布尔       | 否   | 是否输出 `compile_commands.json`，默认 `true`                        |
 | response_file       | 字符串     | 否   | 链接命令行过长时是否改用响应文件，`auto`（默认）／`always`／`never`  |
 | exclude_source      | 字符串数组 | 否   | 保留字段，当前不参与构建                                             |
 
 !!! warning "取值非法的字段会直接报错退出"
-    `target_type` 与 `compiler` 只接受上表列出的取值，写错会以非 0 退出码结束并提示可选值；`source` 为空、`projectName` 为空或含非法字符、`link_args` 不是数组、`jobs` 不是正整数、`response_file` 取值非法同样会报错。不存在「静默退回默认值」这种行为。
+    `target_type` 与 `compiler` 只接受上表列出的取值，写错会以非 0 退出码结束并提示可选值；`source` 为空、`projectName` 为空或含非法字符、`link_args` 不是数组、`jobs` 不是正整数、`backend` 或 `response_file` 取值非法同样会报错。不存在「静默退回默认值」这种行为。
 
 ## 字段细节
 
@@ -65,6 +66,16 @@
 
 并行编译的单元数，默认 `min(8, CPU 核数)`，填 `1` 即串行。并行只影响编译阶段的推进速度，不改变产物内容——同一份输入在串行与并行下产出的目标文件与可执行文件完全一致（测试里有断言）。代价是多进程输出会交错，需要按文件逐条阅读诊断信息时用 `jobs: 1`。
 
+### backend
+
+指定由谁来执行编译，默认 `antel`（内置并行执行器）；填 `make` 则调用 make 工具执行。无论哪种，**"编什么"始终由 antel 决定**（hash 基线 + `-MMD` 依赖），make 只负责把它们并行编完：
+
+- antel 会生成一份内部规则文件 `<输出目录>/log/antel.mk`（每次构建重建、头部带"生成物勿改"标记）。它**不是交付物**，项目根不会出现 Makefile，也不需要你维护。
+- 交给 make 之前，antel 会**先删掉本轮判定为过期的目标文件**。因为 make 按时间戳判定，实测把"已是最新"的目标交给它会被直接跳过；而按 hash 判定这些目标确实过期，删掉才能确保重建。
+- make 的完整输出记录在 `<输出目录>/log/<项目名>.make`。
+
+实测（150 个编译单元、8 核）：两种执行器耗时基本持平（约 1.1–1.3 秒）。用 make 的收益不在于更快，而在于与 make 工具链的一致性（jobserver、可以手工 `make -f <输出目录>/log/antel.mk` 复现同一次编译）。
+
 ### compile_commands
 
 默认 `true`，每次构建都会重写 `<输出目录>/compile_commands.json`，逐条记录每个编译单元完整的命令行（给结构化 `arguments`，不用在含空格路径上不可靠的 `command` 字符串）。clangd 只在源码目录树里查找这个文件，因此需要显式指向输出目录，二选一：
@@ -99,6 +110,8 @@ CompileFlags:
 | `<输出目录>/log/hashes_diff` | 本次相对基线发生变化的文件及前后 hash |
 | `<输出目录>/log/stale_files` | 本次实际需要重新编译的源文件清单 |
 | `<输出目录>/log/<项目名>.<compiler>` | 本次执行的完整编译命令 |
+| `<输出目录>/log/antel.mk` | 内部规则文件（`backend: make` 时生成，每次构建重建，不是交付物） |
+| `<输出目录>/log/<项目名>.make` | 用 make 执行编译时的完整输出 |
 | `<输出目录>/log/<项目名>_link.sh` | 本次执行的链接脚本，链接就是执行这个脚本 |
 | `<输出目录>/log/<项目名>_link.rsp` | 链接命令行过长时使用的响应文件（`response_file` 控制） |
 | `<输出目录>/log/linkInfor` | 链接过程的完整输出 |

@@ -289,6 +289,38 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 
 **验收**：150 TU 在默认配置下走 make 且总耗时不高于内置线程池后端；改公共头后两种后端的重编集合一致；无 make 的环境自动回退，产物与走 make 时字节一致。
 
+#### P1-2 实施记录（已完成，2026-09-17）
+
+交付内容：
+
+| 项 | 落点 |
+| --- | --- |
+| 规则文件渲染 | 新增 `antelope/makefile.py`：`ruleFilePath`（`<输出目录>/log/antel.mk`）、`escapePath`、`escapeRecipe`、`renderRuleText` |
+| make 执行器 | `MakeRunner`：写规则文件 → 删掉本轮过期目标 → `make -f <规则> -j<jobs> <过期目标>`，输出记入 `log/<项目名>.make` |
+| 两条路径的公共部分 | `Compiler.log_compile_units`（审计日志）抽出，内置执行器与 make 执行器共用 |
+| 配置与编排 | 配置字段 `backend`（`antel` 默认 / `make`）；`Antelope.compileSources` 选择执行器，`Antelope.buildMakePlan` 组装 `BuildPlan` |
+
+实现约定与依据：
+
+- 逐单元显式规则（目标名扁平化，模式规则表达不了 `src/main.c → obj/src_main.o`）
+- 调用前先删过期目标；规则文件带 `.DELETE_ON_ERROR:`，避免失败时留下半成品被当成"已构建"
+- `$` 在 recipe 里翻倍：实测 `-Wl,-rpath,$ORIGIN` 不翻倍会被 make 吃成 `RIGIN`
+- 目标名与依赖名转义空格、制表符、`#`、`$`
+
+实测结果：
+
+| 场景 | 结果 |
+| --- | --- |
+| 新增测试 | 5 条（规则文件内容与生成标记、改头文件后重编、**mtime 陷阱**、含空格路径、make 失败退出码），总数 14 条全绿 |
+| mtime 陷阱 | 把 `.o` 的时间戳改成比头文件新之后，`build` 仍重编并把产物更新到新值（依赖"先删目标"，不依赖 mtime 判定） |
+| 含空格路径 | 可用：规则里转义、gcc 的 `.d` 自身也转义空格、make 能解析（此前预期需要加限制，实测推翻） |
+| 失败路径 | make 退出码 2 → antel 退出码 1，错误信息指出规则文件路径 |
+| 150 TU 端到端，`jobs=8` | 内置执行器 1.10–1.33s，make 1.16–1.25s → **基本持平** |
+
+**预期修正**：此前把 `make -j8` 跑现成 Makefile 的 0.78s 与 antel 端到端 1.11s 相比，口径不同（前者不含 hash 判定、日志与产物分析）。端到端实测两者持平，因此**用 make 的收益不在速度**，而在与 make 工具链的一致性（jobserver、可手工 `make -f log/antel.mk` 复现同一次编译）。
+
+**本批未做（留待 P1-3）**：`backend` 的 `auto` 默认值、make 缺失时的自动回退与提示、从 make 内部调用 antel 时的 jobserver 透传。
+
 ### Phase 2：gcc 能力面补齐（4-6 天）
 
 | 能力            | 实现要点                                                                                                   | 验收                                                    |

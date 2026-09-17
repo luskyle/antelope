@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import subprocess
 
@@ -172,3 +173,71 @@ def test_invalid_jobs_is_rejected(project):
 
     assert result.exit_code != 0
     assert 'jobs' in result.output
+
+
+def test_make_backend_builds_with_rule_file(project):
+    """backend: make 时由 make 执行编译，并落一份内部规则文件（不是交付物）"""
+    write_config(project, backend='make', jobs=2)
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+    assert run_program(project) == 'foo1 bar1'
+
+    text = (project / 'demo_antel' / 'log' / 'antel.mk').read_text()
+    assert '请勿手改' in text
+    assert 'demo_antel/obj/src_main.o: src/main.c' in text
+    assert '-include demo_antel/obj/src_main.o.d' in text
+
+    # 项目根不应多出 Makefile
+    assert not (project / 'Makefile').exists()
+
+
+def test_make_backend_rebuilds_changed_header(project):
+    """make 后端下改头文件必须重编受影响的编译单元"""
+    write_config(project, backend='make')
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+    assert run_program(project) == 'foo1 bar1'
+
+    (project / 'inc' / 'bar.h').write_text('#define BAR_MSG "bar2"\n')
+    assert CliRunner().invoke(main, ['build']).exit_code == 0
+
+    assert run_program(project) == 'foo1 bar2'
+
+
+def test_make_backend_is_not_fooled_by_mtime(project):
+    """
+    把目标文件的时间戳改成比头文件还新之后，make 仍必须重建：
+    antel 按 hash 判定它过期，并在交给 make 之前先删掉它（DESIGN §3.2 约定 2）
+    """
+    write_config(project, backend='make')
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+
+    (project / 'inc' / 'bar.h').write_text('#define BAR_MSG "bar3"\n')
+    os.utime(project / 'demo_antel' / 'obj' / 'src_main.o')
+
+    assert CliRunner().invoke(main, ['build']).exit_code == 0
+
+    assert run_program(project) == 'foo1 bar3'
+
+
+def test_make_backend_supports_paths_with_spaces(project):
+    """含空格路径在 make 后端下同样可用（规则里做了转义，gcc 的 .d 也会转义）"""
+    spaced = project / 'src dir'
+    spaced.mkdir()
+    (spaced / 'main.c').write_text('#include <stdio.h>\nint main(){ printf("spaced\\n"); }\n')
+    write_config(project, source=['src dir/main.c'], include_directories=[], backend='make')
+
+    assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
+
+    assert run_program(project) == 'spaced'
+
+
+def test_make_backend_failure_exits_nonzero(project):
+    """make 失败（退出码 2）时 antel 以非 0 退出，并指出规则文件"""
+    write_config(project, backend='make')
+    (project / 'src' / 'main.c').write_text('int main(){ this is not c }\n')
+
+    result = CliRunner().invoke(main, ['rebuild'])
+
+    assert result.exit_code != 0
+    assert '规则文件' in result.output
+    assert '链接完毕' not in result.output
+    assert not (project / 'demo_antel' / 'demo').exists()
