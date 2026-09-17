@@ -4,7 +4,7 @@ with open('README.md', encoding='utf-8') as readme:
     long_description = readme.read()
 
 setup(name='antelope',
-      version='1.0',
+      version='1.1',
       author='zhanhui.lu',
       author_email='luzhanhui@boe.com.cn',
       description='小巧敏捷的编译链接工具。专注于编译各类 c/c++ 项目，以生成静态库、共享库、可执行程序。',
