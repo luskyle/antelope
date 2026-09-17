@@ -470,12 +470,13 @@ def render_report(report:dict) -> str:
             symbol_rows += (f'<tr><td class="name">{esc(section["source"])}</td>'
                             f'<td class="warn" colspan="2">目标文件缺失（未编译）</td></tr>')
             continue
-        group_text = ' '.join(f'{esc(k)}<b>{v}</b>' for k, v in section['groups'].items())
-        detail = ' '.join(f'<span class="sym">{esc(k)}&nbsp;<span class="sym-name">{esc(n)}</span></span>'
+        group_text = ' '.join(f'<span class="group-chip">{esc(k)} <b>{v}</b></span>'
+                              for k, v in section['groups'].items())
+        detail = ' '.join(f'<code class="sym-chip">{esc(k)}&nbsp;{esc(n)}</code>'
                           for k, n in section['symbols'][:60])
         symbol_rows += (f'<tr><td class="name">{esc(section["source"])}</td>'
                         f'<td>{section["total"]}</td>'
-                        f'<td class="mono small">{group_text}<br>{detail}</td></tr>')
+                        f'<td class="small">{group_text}<br>{detail}</td></tr>')
 
     # 依赖表
     dep_rows = ''
@@ -550,8 +551,14 @@ code {{ background: #0f172a; border: 1px solid #334155; border-radius: 4px;
 .chip {{ display: inline-block; background: #0f172a; border: 1px solid #334155;
         border-radius: 999px; padding: 0 8px; margin: 1px; font-size: 12px;
         color: #a5b4fc; }}
-.sym {{ color: #64748b; margin-right: 6px; }}
-.sym-name {{ color: #e2e8f0; }}
+.group-chip {{ display: inline-block; background: #1e293b; border: 1px solid #334155;
+              border-radius: 6px; padding: 1px 8px; margin: 1px 2px 1px 0;
+              font-size: 12px; color: #cbd5e1; }}
+.group-chip b {{ color: #67e8f9; }}
+.sym-chip {{ display: inline-block; background: #0f172a; border: 1px solid #334155;
+            border-radius: 6px; padding: 1px 7px; margin: 2px 3px 2px 0;
+            font-size: 12px; color: #e2e8f0; white-space: nowrap;
+            font-family: "DejaVu Sans Mono", monospace; }}
 .bar-row {{ display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }}
 .bar-name {{ width: 34%; font-size: 12px; white-space: nowrap; overflow: hidden;
             text-overflow: ellipsis; }}
