@@ -16,7 +16,7 @@ class Compiler():
                 include_directories_global:list=[], target_type_global:TargetType=TargetType.Static,
                 compiler_global:CompilerType=CompilerType.gxx, compiler_args_list_global:list=[],
                 link_args_list_global:list=[], output_dir:str='.', jobs:int=1,
-                compile_commands:bool=True):
+                compile_commands:bool=True, pkg_cflags:list=[]):
         self.project_name = project_name_global
         self.source = list(source_global)
         self.include_directories = list(include_directories_global)
@@ -27,6 +27,7 @@ class Compiler():
         self.output_dir = output_dir
         self.jobs = jobs
         self.compile_commands = compile_commands
+        self.pkg_cflags = list(pkg_cflags)
 
         self.dir = Directory()
         self.log = Log(output_dir)
@@ -66,6 +67,7 @@ class Compiler():
             obj = f'{self.output_dir}/obj/{obj_file}'
 
             args = list(compile_args)
+            args += list(self.pkg_cflags)
             args += self.parse_dep_file_args(obj)
             args += ['-c', '-o', obj, source]
             args += includes

@@ -84,6 +84,8 @@
 
 ### M2：日常体验与常见发布形态
 
+> 进度：**P2-2 ✅ 已完成（2026-09-17）**（pkg-config 集成）；P2-1、P2-3、P2-4 待做。
+
 #### P2-1 诊断聚合
 
 | 项 | 内容 |
@@ -181,8 +183,9 @@
 | 2026-09-16 | M0 / Phase 0 | 并行 3.5×、结构化解耦、`compile_commands.json`、注入面收口；CI 3.9/3.11/3.13 全绿 | `c6af1a0` |
 | 2026-09-16 | 设计修正（未开工） | 边界定为 A（内部规则 + make 当执行器），默认 `backend: auto`；DESIGN.md 的 §2.2/§3.2/§3.3/§3.4/§4.1/§4.2/§5/§6/§7/附录 A/B 与 PLAN.md 的 M1 同步更新 | `ca7c0e1` `8adcc7f` |
 | 2026-09-17 | M1 / P1-2 | 规则文件渲染 + make 执行器 + `backend` 字段（显式 antel/make）；先删目标、`$` 翻倍、`.DELETE_ON_ERROR`；测试 9 → 14 条；150 TU 两种执行器实测持平（收益不在速度，在 jobserver 与可复现） | `759b26c` |
-| 2026-09-17 | M1 / P1-3 | `backend` 默认 `auto`（有 make 用 make，否则回退并提示）+ 摘要标出实际执行器；被 make 调用时不传 `-j`、内置执行器串行；测试 14 → 18 条；缺 make 环境产物与走 make 字节一致 | 本批提交（未推送） |
-| 2026-09-17 | M1 / P1-1+P1-4（收口） | `antel sync-baseline`；`tests/test_make_backend.py` 固化 §3.3 三条断言（不漏编 / 产物字节等价 / 不被 make 跳过），脚手架抽到 conftest.py；测试 18 → 22 条 | 本批提交（未推送） |
+| 2026-09-17 | M1 / P1-3 | `backend` 默认 `auto`（有 make 用 make，否则回退并提示）+ 摘要标出实际执行器；被 make 调用时不传 `-j`、内置执行器串行；测试 14 → 18 条；缺 make 环境产物与走 make 字节一致 | `dcacb59` |
+| 2026-09-17 | M1 / P1-1+P1-4（收口） | `antel sync-baseline`；`tests/test_make_backend.py` 固化 §3.3 三条断言，脚手架抽到 conftest.py；测试 18 → 22 条 → M1 完成 | `43c4412` |
 | 2026-09-17 | 示例与入库 | `test/cdemo` 多文件 C 示例提交进仓库 | `465defa` |
+| 2026-09-17 | M2 / P2-2 | `pkg_config` 字段：注入 `pkg-config --cflags/--libs`；`Command.run_argv` 加 `capture` 模式；测试 22 → 25 条；真实包 fontconfig 端到端验证 | 本批提交 |
 
 后续每完成一个批次，在此追加一行，并在 DESIGN.md 对应阶段追加实施记录。

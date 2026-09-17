@@ -14,7 +14,8 @@ class Linker():
     def __init__(self, project_name_global:str="", source_global:list=[],
                 include_directories_global:list=[], target_type_global:TargetType=TargetType.Static,
                 compiler_global:CompilerType=CompilerType.gxx, compiler_args_list_global:list=[],
-                link_args_list_global:list=[], output_dir:str='.', response_file:str='auto'):
+                link_args_list_global:list=[], output_dir:str='.', response_file:str='auto',
+                pkg_libs:list=[]):
         self.project_name = project_name_global
         self.source = list(source_global)
         self.include_directories = list(include_directories_global)
@@ -24,6 +25,7 @@ class Linker():
         self.link_args_list = list(link_args_list_global)
         self.output_dir = output_dir
         self.response_file = response_file
+        self.pkg_libs = list(pkg_libs)
 
         self.dir = Directory()
         self.log = Log(output_dir)
@@ -68,11 +70,13 @@ class Linker():
             driver = self.link_driver()
             args = ['-shared', '-o', f'{self.output_dir}/lib{self.project_name}.so'] + objs
             args += ['-lm'] + self.external.link_system_args + self.external.link_user_args
+            args += self.pkg_libs
         else:
             driver = self.link_driver()
             args = ['-s'] + objs
             args += ['-o', f'{self.output_dir}/{self.project_name}', '-Wl,--add-needed', '-lc', '-lm']
             args += list(compile_args) + self.external.link_system_args + self.external.link_user_args
+            args += self.pkg_libs
 
         return LinkJob(driver=driver, args=args,
                     output=f'{self.output_dir}/{self.project_name}',

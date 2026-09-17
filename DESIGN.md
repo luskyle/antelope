@@ -362,6 +362,21 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 | 诊断聚合        | 编译输出按 TU 归并、警告计数、失败按文件分组                                                               | 多错误场景输出可读，失败仍以非 0 退出                   |
 | 工具包装        | `wrapper: [ccache]`                                                                                      | 包装器生效且不破坏依赖判定                              |
 
+#### P2-2 实施记录（已完成，2026-09-17）
+
+交付内容：
+
+- 配置字段 `pkg_config: [...]`：构建时对每个包运行 `pkg-config --cflags/--libs`，输出用 `shlex.split` 解析成结构化参数后注入——`--cflags` 追加进每个编译单元（排在用户 `compile_args` 之后，用户 `-I` 优先级更高），`--libs` 追加到链接命令末尾（`ar` 归档天然跳过）
+- `Compiler` / `Linker` 各新增 `pkg_cflags` / `pkg_libs` 参数；`Command.run_argv` 增加 `capture=True` 模式（只取输出、不打印不落盘）
+- 解析只在 `flushSetting` 做一次：包不存在（`pkg-config` 退出码 1）或命令缺失时直接 `ConfigError` 报错
+
+实测：
+
+- 新增 3 条测试（端到端假外部库、包不存在、命令缺失），总数 22 → **25** 条全绿。端到端用例真实编译出 `libfoo.a`，证明"没有 `pkg_config` 就编不过、加上后编译与链接都注入正确参数"
+- 用真实包 fontconfig 手工验证：`-I/usr/include/uuid -I/usr/include/freetype2 -I/usr/include/libpng16` 进入编译命令、`-lfontconfig` 进入链接脚本，构建退出码 0
+
+实现过程中发现并修复的坑：pkg-config 的输出一开始用 `Command.run_argv` 的默认（透传）模式拿不回来——该模式输出直接进终端、返回空串，导致 `-I` 静默丢失。给 `run_argv` 增加 `capture` 参数后解决。
+
 ### Phase 3：生态互操作（2-3 天，可选）
 
 - `antel make -- …`：转交 make，接管输出/退出码/日志（§4.3）

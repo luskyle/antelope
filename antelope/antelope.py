@@ -1,5 +1,7 @@
 import os
 import re
+import shlex
+import shutil
 import sys
 import functools
 import click
@@ -38,6 +40,7 @@ class Antelope:
         self.backend = 'auto'
         self.compile_commands = True
         self.response_file = 'auto'
+        self.pkg_config = []
 
         self.dir = Directory()
         self.console = Console()
@@ -49,18 +52,20 @@ class Antelope:
                             self.compiler_type, self.compile_args_list,
                             self.link_args_list, self.output_dir)
 
+        pkg_cflags, pkg_libs = resolvePkgConfig(self.pkg_config)
+
         compilerObj = Compiler(self.project_name, self.source,
                             self.include_directories, self.target_type,
                             self.compiler_type, self.compile_args_list,
                             self.link_args_list, self.output_dir,
-                            self.jobs, self.compile_commands)
+                            self.jobs, self.compile_commands, pkg_cflags)
         self.compiler = compilerObj
 
         linkerObj = Linker(self.project_name, self.source,
                             self.include_directories, self.target_type,
                             self.compiler_type, self.compile_args_list,
                             self.link_args_list, self.output_dir,
-                            self.response_file)
+                            self.response_file, pkg_libs)
         self.linker = linkerObj
 
         runnerObj = Runner(self.project_name, self.source,
@@ -237,6 +242,25 @@ def readBackend(config:dict):
         raise ConfigError(f'backend 取值非法：{value}，可选 ' + '、'.join(BACKENDS))
     return value
 
+def resolvePkgConfig(packages:list):
+    """
+    把每个包的 --cflags / --libs 解析成结构化参数，注入编译与链接命令。
+    包不存在或机器上没有 pkg-config 时直接报错，不静默跳过
+    """
+    if packages.__len__() == 0:
+        return [], []
+
+    pkg_config = shutil.which('pkg-config')
+    if pkg_config is None:
+        raise ConfigError('配置了 pkg_config，但机器上没有 pkg-config 命令')
+
+    cflags = []
+    libs = []
+    for package in packages:
+        cflags += shlex.split(Command().run_argv([pkg_config, '--cflags', package], capture=True))
+        libs += shlex.split(Command().run_argv([pkg_config, '--libs', package], capture=True))
+    return cflags, libs
+
 def describeBackend(backend:str):
     """把 auto 解析成实际会用的执行器，便于在配置摘要里一眼看到"""
     if backend != 'auto':
@@ -309,6 +333,7 @@ def parseJsonConfig(file:str='antel'):
     antel.backend = readBackend(config)
     antel.compile_commands = readBool(config, 'compile_commands', True)
     antel.response_file = readResponseFile(config)
+    antel.pkg_config = readList(config, 'pkg_config')
     print(f'并行度：{antel.jobs}  执行器：{describeBackend(antel.backend)}  compile_commands.json：'
         + ('开启' if antel.compile_commands else '关闭'))
 

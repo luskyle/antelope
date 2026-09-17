@@ -16,6 +16,7 @@
 | backend             | 字符串     | 否   | 执行编译的工具，`auto`（默认：有 make 就用 make，没有则回退内置执行器）／`make`／`antel` |
 | compile_commands    | 布尔       | 否   | 是否输出 `compile_commands.json`，默认 `true`                        |
 | response_file       | 字符串     | 否   | 链接命令行过长时是否改用响应文件，`auto`（默认）／`always`／`never`  |
+| pkg_config          | 字符串数组 | 否   | 外部库清单，逐包注入 `pkg-config` 的 `--cflags/--libs` 输出，如 ["libcurl"] |
 | exclude_source      | 字符串数组 | 否   | 保留字段，当前不参与构建                                             |
 
 !!! warning "取值非法的字段会直接报错退出"
@@ -103,6 +104,15 @@ CompileFlags:
 ### response_file
 
 链接命令行过长时（默认阈值 10 万字符，例如对象文件极多）改用响应文件传参：`auto` 只在超阈值时启用，`always` 始终启用，`never` 关闭。`ar` 不支持响应文件，静态库链接不会走这条路。
+
+### pkg_config
+
+外部库清单，例如 `["libcurl", "sqlite3"]`。构建时对每个包运行 `pkg-config --cflags/--libs`，把输出注入编译与链接命令：
+
+- `--cflags` 的 `-I` / `-D` 等追加在每个编译命令里（排在你的 `compile_args` 之后，所以你的 `-I` 优先级更高），同时进入 `compile_commands.json`，clangd 也受益
+- `--libs` 的 `-L` / `-l` 追加在链接命令末尾（静态库的 `ar` 归档不参与链接，天然跳过）
+
+包不存在、或机器上没有 pkg-config 命令时直接报错退出，不会静默丢参数。
 
 ## 构建目录
 

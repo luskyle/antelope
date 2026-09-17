@@ -18,14 +18,14 @@ class Command():
     def run(self, command:str, redirect_to:str='', echo:bool=False):
         return self.run_argv(shlex.split(command), redirect_to, echo)
 
-    def run_argv(self, argv:list, redirect_to:str='', echo:bool=False):
+    def run_argv(self, argv:list, redirect_to:str='', echo:bool=False, capture:bool=False):
         if argv.__len__() == 0:
             raise CommandError('', 127, reason='空命令')
 
         if shutil.which(argv[0]) is None:
             raise CommandError(shlex.join(argv), 127, reason=f'命令不存在或不可执行：{argv[0]}')
 
-        if redirect_to == '' and not echo:
+        if redirect_to == '' and not echo and not capture:
             return self.runInheritOutput(argv)
         return self.runCaptureOutput(argv, redirect_to, echo)
 
