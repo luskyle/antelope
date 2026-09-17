@@ -80,7 +80,7 @@ antel analyze    # 生成可视化分析报告 report.html
 | [编译器支持](https://luskyle.github.io/antelope/compilers/)       | gxx / llvm / msvc 与目标类型的支持细节                                              |
 | [开发与发布](https://luskyle.github.io/antelope/development/)     | 测试、打包、发版流程与工作流                                                        |
 
-自带示例（`test/` 下，均可直接构建运行）：`helloworld`（单文件）、`cdemo`（多文件）、`gtkcalc`（libadwaita 计算器）、`resdemo`（资源打包 GUI 演示）、`antelstats`（版本化动态库 + 消毒器/覆盖率）。
+自带示例（`demos/` 下，均可直接构建运行）：`helloworld`（单文件）、`cdemo`（多文件）、`gtkcalc`（libadwaita 计算器）、`resdemo`（资源打包 GUI 演示）、`antelstats`（版本化动态库 + 消毒器/覆盖率）。
 
 ## 开发
 

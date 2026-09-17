@@ -1,14 +1,14 @@
 # 示例与效果图
 
-仓库自带的示例工程都在 `test/` 下，都是真实可构建、可运行的项目。下面的效果图与配置一一对应，照抄即可复现。
+仓库自带的示例工程都在 `demos/` 下，都是真实可构建、可运行的项目。下面的效果图与配置一一对应，照抄即可复现。
 
 ## gtkcalc：GTK 计算器（`pkg_config` 集成）
 
-位置：`test/gtkcalc/`。一个用 libadwaita（GTK 4）写的计算器，演示最常见的图形项目形态：**GUI + 外部库**。它不手写任何 `-I`/`-l`，全靠 `pkg_config` 注入。
+位置：`demos/gtkcalc/`。一个用 libadwaita（GTK 4）写的计算器，演示最常见的图形项目形态：**GUI + 外部库**。它不手写任何 `-I`/`-l`，全靠 `pkg_config` 注入。
 
 ![gtkcalc 界面](images/demo_gtkcalc.png)
 
-**antel.json**（`test/gtkcalc/antel.json`）：
+**antel.json**（`demos/gtkcalc/antel.json`）：
 
 ```json
 {
@@ -44,7 +44,7 @@
 - 构建与运行：
 
   ```bash
-  cd test/gtkcalc
+  cd demos/gtkcalc
   antel rebuild
   ./gtkcalc_antel/gtkcalc
   ```
@@ -60,7 +60,7 @@
 
 ## resdemo：运行资源打包（`data_files` / `gresource` / `embed`）
 
-位置：`test/resdemo/`。一个程序同时用三种形态携带资源，界面本身也由资源驱动，用来演示完整的资源分发方案：
+位置：`demos/resdemo/`。一个程序同时用三种形态携带资源，界面本身也由资源驱动，用来演示完整的资源分发方案：
 
 - **data_files —— 目录分发**：`assets/` 复制进输出目录，可替换；程序按 `/proc/self/exe` 定位（与当前工作目录无关）
 - **gresource —— 单文件分发**：整个界面（`main.ui`）、样式（`style.css`）、图标（`logo.png`）、文本（`notes.txt`）全部编译进可执行文件，GtkBuilder / CSS provider 直接按资源路径加载
@@ -68,7 +68,7 @@
 
 ![resdemo 界面](images/demo_resdemo.png)
 
-**antel.json**（`test/resdemo/antel.json`）：
+**antel.json**（`demos/resdemo/antel.json`）：
 
 ```json
 {
@@ -102,7 +102,7 @@
 **配套文件结构**：
 
 ```text
-test/resdemo/
+demos/resdemo/
 ├── antel.json                 # 上面的配置
 ├── gresource.gresource.xml    # gresource 清单（prefix 与文件别名）
 ├── assets/
@@ -147,22 +147,47 @@ test/resdemo/
 **构建与运行**：
 
 ```bash
-cd test/resdemo
+cd demos/resdemo
 antel rebuild
 ./resdemo_antel/resdemo
 ```
 
 窗口内左下角的开关切换深色/浅色主题（颜色来自 gresource 编进去的 `style.css`），右侧按钮重新从磁盘读取 `data_files` 的 banner——两个交互都演示「改资源 → build → 界面跟着变」。
 
+### 日志与构建产物分析
+
+构建时每个环节都会落盘一份可复核的产物，`antel analyze` 把这些数据汇总成一页可视化报告。这是 resdemo 构建后 `demos/resdemo/resdemo_antel/log/` 下的实际内容：
+
+| 文件 | 内容 |
+| --- | --- |
+| `resdemo.gxx` | 本次执行的完整编译命令（gcc ... `-I/usr/include/libadwaita-1` ... `-o resdemo_antel/obj/src_main.o`） |
+| `resdemo.make` | 走 make 后端时的完整输出（实际编译是否跳过/重编） |
+| `antel.mk` | 内部规则文件（生成物勿改；手工 `make -f` 可复现同一次编译） |
+| `resdemo_link.sh` | 链接脚本，链接就是执行这个脚本——能提前看到 `-ladwaita-1 -lgtk-4 ...` 全部库依赖 |
+| `linkInfor` | 链接过程的完整输出，链接失败时的第一现场 |
+| `hashes` | hash 基线，记录上次成功构建的全部输入文件与 md5 |
+| `report.html` | `antel analyze` 生成的可视化分析报告（自包含单文件，浏览器打开） |
+
+**用报告逐项核对 resdemo**（`antel analyze` 后打开 `resdemo_antel/report.html`）：
+
+- **资源情况**：展开到文件级——10 个资源文件，`data_files` 3 项（banner.txt/logo.png/payload.bin 的类型与大小）、`gresource` 6 项（XML + main.ui/style.css/logo.png/notes.txt + 生成的 `gresource.c` 142.3 KB）、`embed` 1 项（payload.bin 128 B + `_binary_assets_payload_bin` 符号）；每种资源带 ✓ 已复制/已编入/已嵌入状态
+- **目标符号表**：98 个符号按 nm 类型分类（函数/数据/BSS/未定义引用），`t exec_dir`、`T main` 等每个符号一个独立 chip
+- **编译参数统计**：`-O2×2  -Wall×2`（配合 -I 头文件路径），一眼确认优化级别与警告开关
+- **动态依赖**：NEEDED 列出 `libadwaita-1.so.0 libgtk-4.so.1 libgio-2.0.so.0 ...`，下面是 ldd 完整解析（每条含地址与路径）
+- **增量状态**：hash 基线是否存在、本次变化文件、待重编清单——与 `log/hashes`、`log/hashes_diff`、`log/stale_files` 一一对应
+- **头文件依赖**：从 `obj/*.o.d` 反推 `src/main.c` 依赖的头文件
+
+**排查路径**：改坏代码 → `antel rebuild` 失败 → 先看 `log/<项目名>.gxx` 的编译命令、再看 `report.html` 的诊断汇总；链接失败 → `log/linkInfor` + 链接脚本；怀疑增量判断 → `log/hashes_diff` 与 `log/stale_files`。所有数据都是真实工具（`file`/`nm`/`readelf`/`ldd`/`gcov`）的输出，可直接复核。
+
 !!! note "为什么能放心走增量"
     `glib-compile-resources` 对同样的输入生成**逐字节相同**的输出（已实测），因此 gresource 源可以安全进入 antel 的 hash 基线；`ld -r -b binary` 的符号命名是确定的规则：`assets/payload.bin` → `_binary_assets_payload_bin_start/_end/_size`（路径里非字母数字字符全部换成下划线）。这两条是设计文档（DESIGN.md）与测试里明确的契约。
 
 ## antelstats：共享库与消费者
 
-位置：`test/antelstats/`。一个统计分析小工具：共享库 `libantelstats` 提供均值/标准差/中位数等统计函数，可执行程序调用它打印报表。**只用了两个配置文件**——库的生产形态与可执行程序的消费形态——没有其他花活；示例数据直接写死在 `main.c` 里，运行不需要任何外部文件。
+位置：`demos/antelstats/`。一个统计分析小工具：共享库 `libantelstats` 提供均值/标准差/中位数等统计函数，可执行程序调用它打印报表。**只用了两个配置文件**——库的生产形态与可执行程序的消费形态——没有其他花活；示例数据直接写死在 `main.c` 里，运行不需要任何外部文件。
 
 ```text
-test/antelstats/
+demos/antelstats/
 ├── antel.json    # 版本化共享库 libantelstats.so.1.0.0（多文件：stats/csv/version）
 ├── app.json      # 可执行程序：按 soname 链接库，rpath 加载运行
 └── src/          # antelstats.h / stats.c / csv.c / version.c / main.c
@@ -209,7 +234,7 @@ libantelstats.so.1 => .../antelstats_antel/libantelstats.so.1
 构建与运行（两行命令，无外部输入）：
 
 ```bash
-cd test/antelstats
+cd demos/antelstats
 antel rebuild                 # 版本化共享库 + 软链
 antel rebuild -f app && ./app_app/app          # 内嵌数据直接出统计报表
 antel analyze -f app          # 生成可视化报告 app_app/report.html
