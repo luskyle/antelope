@@ -15,7 +15,7 @@ class Linker():
                 include_directories_global:list=[], target_type_global:TargetType=TargetType.Static,
                 compiler_global:CompilerType=CompilerType.gxx, compiler_args_list_global:list=[],
                 link_args_list_global:list=[], output_dir:str='.', response_file:str='auto',
-                pkg_libs:list=[]):
+                pkg_libs:list=[], sanitize:list=[], coverage:bool=False):
         self.project_name = project_name_global
         self.source = list(source_global)
         self.include_directories = list(include_directories_global)
@@ -26,6 +26,8 @@ class Linker():
         self.output_dir = output_dir
         self.response_file = response_file
         self.pkg_libs = list(pkg_libs)
+        self.sanitize = list(sanitize)
+        self.coverage = coverage
 
         self.dir = Directory()
         self.log = Log(output_dir)
@@ -78,9 +80,19 @@ class Linker():
             args += list(compile_args) + self.external.link_system_args + self.external.link_user_args
             args += self.pkg_libs
 
+        # 消毒器与覆盖率：链接阶段必须带上工具链的运行时
+        if driver != 'ar':
+            args += self.sanitize_args()
+            if self.coverage:
+                args += ['--coverage']
+
         return LinkJob(driver=driver, args=args,
                     output=f'{self.output_dir}/{self.project_name}',
                     response_file=self.plan_response_file(driver, args))
+
+    def sanitize_args(self):
+        """消毒器参数：每个 -fsanitize=<item>，链接时带运行时（与编译一致）"""
+        return [f'-fsanitize={item}' for item in self.sanitize]
 
     def plan_response_file(self, driver:str, args:list):
         """

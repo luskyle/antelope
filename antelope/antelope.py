@@ -42,6 +42,8 @@ class Antelope:
         self.compile_commands = True
         self.response_file = 'auto'
         self.pkg_config = []
+        self.sanitize = []
+        self.coverage = False
         self.data_files = []
         self.gresource = ''
         self.embeds = []
@@ -66,14 +68,16 @@ class Antelope:
                             self.include_directories, self.target_type,
                             self.compiler_type, self.compile_args_list,
                             self.link_args_list, self.output_dir,
-                            self.jobs, self.compile_commands, pkg_cflags)
+                            self.jobs, self.compile_commands, pkg_cflags,
+                            self.sanitize, self.coverage)
         self.compiler = compilerObj
 
         linkerObj = Linker(self.project_name, self.source,
                             self.include_directories, self.target_type,
                             self.compiler_type, self.compile_args_list,
                             self.link_args_list, self.output_dir,
-                            self.response_file, pkg_libs)
+                            self.response_file, pkg_libs,
+                            self.sanitize, self.coverage)
         self.linker = linkerObj
 
         runnerObj = Runner(self.project_name, self.source,
@@ -353,6 +357,8 @@ def parseJsonConfig(file:str='antel'):
     antel.compile_commands = readBool(config, 'compile_commands', True)
     antel.response_file = readResponseFile(config)
     antel.pkg_config = readList(config, 'pkg_config')
+    antel.sanitize = readList(config, 'sanitize')
+    antel.coverage = readBool(config, 'coverage', False)
     antel.data_files = readDataFiles(config)
     antel.gresource = readGresource(config)
     antel.embeds = readEmbeds(config)
