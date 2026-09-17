@@ -90,5 +90,5 @@ antelope/            包源码
 └── runner/          运行生成的目标
 docs/                文档站源码
 tests/               pytest 用例
-test/                示例工程
+test/                示例工程（helloworld 单文件、cdemo 多文件）
 ```
