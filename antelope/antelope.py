@@ -227,7 +227,7 @@ class Antelope:
         self.linker.link()
 
     def analyze(self, source=[]):
-        self.analyzor.analyze_obj(source)
+        self.analyzor.analyze_obj(self, source)
 
     def run(self):
         self.runner.run()
@@ -451,7 +451,7 @@ def link(file):
     config = parseJsonConfig(file)
     config.link()
 
-@main.command(help='分析源文件及其生成')
+@main.command(help='生成可视化分析报告（<输出目录>/report.html）')
 @click.option('--file', '-f', default='antel', help='指定一个配置文件')
 @handleBuildError
 def analyze(file):

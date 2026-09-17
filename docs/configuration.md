@@ -11,7 +11,7 @@
 | compiler            | 字符串     | 是   | `msvc`、`gxx`、`llvm`，不区分大小写                                  |
 | compile_args        | 字符串数组 | 否   | 传给编译器的编译参数                                                 |
 | link_args           | 字符串数组 | 否   | 传给链接器的链接参数，如 `["-ldl"]`，只能是字符串数组                |
-| analyze_files       | 字符串数组 | 否   | `antel analyze` 要分析的目标文件所对应的源文件                       |
+| analyze_files       | 字符串数组 | 否   | 已非必需：`antel analyze` 的报告自动覆盖全部源文件，此字段保留兼容       |
 | jobs                | 整数       | 否   | 并行编译的单元数，默认 `min(8, CPU 核数)`；填 `1` 即串行             |
 | backend             | 字符串     | 否   | 执行编译的工具，`auto`（默认：有 make 就用 make，没有则回退内置执行器）／`make`／`antel` |
 | compile_commands    | 布尔       | 否   | 是否输出 `compile_commands.json`，默认 `true`                        |
@@ -69,7 +69,7 @@
 
 ### analyze_files
 
-只影响 `antel analyze`：它对这里列出的每个源文件，用 `objdump -x` 分析对应的目标文件。
+保留兼容字段，已非必需：`antel analyze` 生成的报告自动覆盖配置里的全部源文件，无需在此列出。留空即可（模板默认就是空数组）。
 
 ### jobs
 
