@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="adw" version="1.0"/>
+  <object class="GtkBox" id="root_box">
+    <property name="orientation">vertical</property>
+    <property name="spacing">0</property>
+    <child>
+      <object class="AdwHeaderBar" id="header_bar">
+        <child type="title">
+          <object class="GtkLabel" id="window_title">
+            <property name="label">Antelope 资源演示</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkScrolledWindow" id="scroller">
+        <property name="vexpand">true</property>
+        <property name="hscrollbar-policy">never</property>
+        <child>
+          <object class="GtkBox" id="content">
+            <property name="orientation">vertical</property>
+            <property name="halign">center</property>
+            <property name="valign">start</property>
+            <property name="width-request">460</property>
+            <property name="margin-top">8</property>
+            <property name="margin-bottom">8</property>
+            <property name="margin-start">16</property>
+            <property name="margin-end">16</property>
+            <child>
+              <object class="GtkBox" id="hero">
+                <style><class name="card"/></style>
+                <property name="orientation">vertical</property>
+                <property name="halign">center</property>
+                <property name="spacing">4</property>
+                <child>
+                  <object class="GtkImage" id="hero_logo">
+                    <style><class name="hero-logo"/></style>
+                    <property name="pixel-size">96</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="hero_title">
+                    <style><class name="hero-title"/></style>
+                    <property name="label">Antelope 资源演示</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="hero_subtitle">
+                    <style><class name="hero-subtitle"/></style>
+                    <property name="label">界面、样式与图标全部来自 gresource 单文件资源</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- data_files：目录分发，资源在可执行文件旁边的 assets/ -->
+            <child>
+              <object class="GtkBox" id="card_data">
+                <style><class name="card"/></style>
+                <property name="orientation">vertical</property>
+                <property name="spacing">8</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel" id="data_title">
+                        <style><class name="card-title"/></style>
+                        <property name="label">data_files</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="data_badge">
+                        <style><class name="card-badge"/></style>
+                        <property name="label">目录分发 · 可替换</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="data_path">
+                    <property name="label">assets/banner.txt → 输出目录（相对可执行文件定位）</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">true</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="data_content">
+                    <style><class name="mono"/><class name="banner-text"/></style>
+                    <property name="wrap">true</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- embed：单文件分发，ld -r -b binary 嵌入 -->
+            <child>
+              <object class="GtkBox" id="card_embed">
+                <style><class name="card"/></style>
+                <property name="orientation">vertical</property>
+                <property name="spacing">8</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel" id="embed_title">
+                        <style><class name="card-title"/></style>
+                        <property name="label">embed</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="embed_badge">
+                        <style><class name="card-badge"/></style>
+                        <property name="label">单文件分发 · _binary_ 符号</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="embed_path">
+                    <property name="label">assets/payload.bin → ld -r -b binary 嵌入 ELF</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">true</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="embed_content">
+                    <style><class name="mono"/><class name="banner-text"/></style>
+                    <property name="wrap">true</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- gresource：单文件分发，GLib 资源 -->
+            <child>
+              <object class="GtkBox" id="card_gres">
+                <style><class name="card"/></style>
+                <property name="orientation">vertical</property>
+                <property name="spacing">8</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel" id="gres_title">
+                        <style><class name="card-title"/></style>
+                        <property name="label">gresource</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="gres_badge">
+                        <style><class name="card-badge"/></style>
+                        <property name="label">单文件分发 · GResource API</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="gres_path">
+                    <property name="label">main.ui | style.css | logo.png | notes.txt 全部编入二进制</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">true</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="gres_content">
+                    <style><class name="mono"/><class name="banner-text"/></style>
+                    <property name="wrap">true</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- 交互：主题切换（样式从 gresource 来）+ 重读 data_files -->
+            <child>
+              <object class="GtkBox" id="controls">
+                <style><class name="card"/></style>
+                <property name="orientation">horizontal</property>
+                <property name="spacing">12</property>
+                <child>
+                  <object class="GtkSwitch" id="dark_switch">
+                    <property name="active">false</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="theme_label">
+                    <property name="label">深色模式（颜色来自 gresource 的 style.css）</property>
+                    <property name="xalign">0</property>
+                    <property name="hexpand">true</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="refresh_btn">
+                    <property name="label">重新读取 data_files</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkLabel" id="statusbar">
+        <style><class name="statusbar"/></style>
+        <property name="label">就绪</property>
+        <property name="xalign">0</property>
+      </object>
+    </child>
+  </object>
+</interface>

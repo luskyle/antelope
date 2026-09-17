@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/com/antelope/demo">
-    <file>data/share/notes.txt</file>
+    <file alias="ui/main.ui">data/ui/main.ui</file>
+    <file alias="css/style.css">data/css/style.css</file>
+    <file alias="img/logo.png">assets/logo.png</file>
+    <file alias="share/notes.txt">data/share/notes.txt</file>
   </gresource>
 </gresources>

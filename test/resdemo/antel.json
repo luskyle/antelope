@@ -14,7 +14,7 @@
     "link_args": [],
     "analyze_files": [],
     "pkg_config": [
-        "gio-2.0"
+        "libadwaita-1"
     ],
     "data_files": [
         "assets"
