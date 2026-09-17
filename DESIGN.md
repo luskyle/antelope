@@ -342,6 +342,13 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 
 **已知限制（本批不做，留待专门批次）**：make 的 jobserver 管道不会穿透 antel 传给子 make —— Python 启动子进程时默认关闭继承的 fd，因此嵌套 make 会打印 `jobserver 不可用: 正使用 -j1` 并串行执行（实测：父规则带 `+` 也一样）。这是**安全方向**的降级（绝不超额并行），代价是该层失去并行。后续做法：把 `--jobserver-auth=3,4` 里的 fd 透传给子进程（需先 dup 并用 FIFO 校验以防误传，否则子 make 可能阻塞在错误的管道上），或依赖 make ≥ 4.4 的 fifo 风格（无需 fd）。本机 make 为 4.3（pipe 风格），fifo 路径无法在本机验证，故本批不动。
 
+#### M1 收尾（P1-1 与 P1-4，2026-09-17）
+
+- **P1-1 `antel sync-baseline`**：CLI 命令（click 会把函数名 `sync_baseline` 规范成 `sync-baseline`），复用 `Antelope.save_baseline()`。
+- **P1-4 跨实现一致性测试**：新增 `tests/test_make_backend.py`，把 §3.3 的三条断言固化为常驻测试；测试脚手架抽到 `tests/conftest.py` 供两个测试模块共用。
+- 实测：22 条测试全绿。三条断言逐一验证：改源文件/改两种头文件后产物始终跟上输入（不漏编）；同一棵树两种后端产物字节一致；目标文件时间戳比头文件新时仍必须重编；`sync-baseline` 后 `build` 不再重编（对照组未 sync 时确实会重编，同时验证了该命令的作用）。
+- 至此 **M1 收口**：`backend: auto` 走 make、缺 make 回退、`antel sync-baseline`、跨实现一致性测试全部就位。
+
 ### Phase 2：gcc 能力面补齐（4-6 天）
 
 | 能力            | 实现要点                                                                                                   | 验收                                                    |

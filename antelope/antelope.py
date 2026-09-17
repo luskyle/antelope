@@ -343,6 +343,14 @@ def build(file):
     config = parseJsonConfig(file)
     config.build()
 
+@main.command(help='只刷新 hash 基线，不编译（手工跑过内部规则文件之后对齐簿记）')
+@click.option('--file', '-f', default='antel', help='指定一个配置文件')
+@handleBuildError
+def sync_baseline(file):
+    config = parseJsonConfig(file)
+    config.save_baseline()
+    print('sync-baseline finished!')
+
 @main.command(help='重新构建项目')
 @click.option('--file', '-f', default='antel', help='指定一个配置文件')
 @handleBuildError
