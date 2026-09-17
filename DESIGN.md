@@ -126,7 +126,7 @@ class BuildPlan:
 
 三条实现约定（均已实测，依据见 §4.2）：
 
-1. 内部规则文件由 antel 每次构建重新生成，放在输出目录内并带"生成物勿改"标记。**它不是交付物**，项目根不会出现 Makefile。
+1. 内部规则文件由 antel 每次构建重新生成，位置是 `<输出目录>/log/antel.mk`，头部带"生成物勿改"标记。**它不是交付物**，项目根不会出现 Makefile。放 `log/` 而不是输出目录根，是为了与本项目既有惯例同构——真正被执行的东西一律落盘留档，`log/<项目名>_link.sh` 就是链接时执行的脚本本体。
 2. 把过期目标交给 make 之前**先删掉这些目标文件**：make 按 mtime 判定，实测"把已是最新的目标交给 make"会被跳过（输出 `已是最新`）；而按 hash 判定它们确实过期，删掉才能确保重建，也避免"头文件时间戳早于目标文件"导致的漏编。
 3. make 的失败退出码（实测失败为 2）由 antel 转成自己的非 0 退出并保留输出到 `log/`；从 make 内部调用 antel 时透传 jobserver 信息。
 
@@ -199,7 +199,7 @@ make 必须有规则来源，因此"直接调用 make"落地为：antel 生成**
 
 | 调用形态                              | 结果                                        |
 | ------------------------------------- | ------------------------------------------- |
-| `make -f -`（从 stdin 读规则）        | 可用（备选形态：完全不在磁盘留下规则文件）  |
+| `make -f -`（从 stdin 读规则）        | 可用，但**不采用**：实测 make 会把 stdin 落成临时文件，报错只给 `/tmp/随机名:行号`，事后也无法复现同一次调用；落 `log/antel.mk` 则报错带可读行号且可手工重跑 |
 | 内部规则文件 + 显式目标 + `-j4`       | 只编点名的目标 ✓                            |
 | 把已是最新的目标交给 make             | 输出"已是最新"并跳过 → **因此必须先删目标** |
 | make 失败退出码                       | 2（"非 0 即失败"成立）                      |
@@ -280,8 +280,8 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 
 **目标**：默认用 make 执行编译，同时保持 antel 的增量判定精度。
 
-- 新增 `antelope/makefile.py`：把 `BuildPlan` 渲染成**内部规则文件**（逐单元显式规则 + 链接目标 + `-include` 依赖文件 + "生成物勿改"标记），写入 `<输出目录>/antel.mk`，每次构建重建
-- 新增 make 执行器：`make -f <输出目录>/antel.mk -j$jobs <本轮过期目标>`，**执行前先删除这些目标文件**（§3.2 约定 2）
+- 新增 `antelope/makefile.py`：把 `BuildPlan` 渲染成**内部规则文件**（逐单元显式规则 + 链接目标 + `-include` 依赖文件 + "生成物勿改"标记），写入 `<输出目录>/log/antel.mk`，每次构建重建
+- 新增 make 执行器：`make -f <输出目录>/log/antel.mk -j$jobs <本轮过期目标>`，**执行前先删除这些目标文件**（§3.2 约定 2）
 - 配置字段 `backend`：`auto`（默认，优先 make，缺失时回退内置线程池并提示）/ `make` / `antel`
 - 从 make 内部调用 antel 时透传 jobserver（`MAKEFLAGS`）
 - `antel sync-baseline`：保留为边角工具（手工跑过内部规则文件后对齐 hash 基线）
@@ -367,10 +367,10 @@ make -n | grep -c 'gcc '     # 改公共头后应为 150，改单个源文件后
 printf -- '-O1 -I . -MMD -MF rsp.d -c -o rsp.o u001.c\n' > args.rsp && gcc @args.rsp
 
 # make 的调用形态（§4.2 的实测依据）
-printf 'all:\n\t@echo ok\n' | make -f -        # 从 stdin 读规则，不落盘
-make -f antel.mk -j4 obj/a.o obj/b.o           # 显式目标 + 并行
-make -f antel.mk obj/a.o                       # 观察："已是最新"并跳过 → 所以要先删目标
-make -f antel.mk obj/bad.o ; echo $?           # 观察：失败退出码 2
+printf 'all:\n\t@echo ok\n' | make -f -        # 从 stdin 读规则（实测可用，本方案不采用，理由见 §4.2）
+make -f log/antel.mk -j4 obj/a.o obj/b.o       # 显式目标 + 并行
+make -f log/antel.mk obj/a.o                   # 观察："已是最新"并跳过 → 所以要先删目标
+make -f log/antel.mk obj/bad.o ; echo $?       # 观察：失败退出码 2
 
 # 为什么不让 make 参与判定（§3.3 的实测依据）
 make -j8                     # make 整包构建
@@ -386,10 +386,10 @@ gcc -O2 -flto main.c liblto.a -o lto_exe
 g++ -x c++-header inc/common.h -o pch.gch
 ```
 
-### B. 内部规则文件（`<输出目录>/antel.mk`）草案
+### B. 内部规则文件（`<输出目录>/log/antel.mk`）草案
 
 ```make
-# 由 antel 生成，请勿手改（每次构建重建）
+# 由 antel 生成，请勿手改（每次构建重建；它不是交付物，只是 make 的输入）
 OBJDIR  := helloworld_antel/obj
 TARGET  := helloworld_antel/helloworld
 CC      := gcc
@@ -417,7 +417,7 @@ $(TARGET): $(OBJDIR)/src_main.o $(OBJDIR)/src_util.o
 -include $(OBJDIR)/src_main.o.d $(OBJDIR)/src_util.o.d
 ```
 
-注：`-MF $@.d`（落成 `x.o.d`）与 `-include` 的命名必须一致（§4.1 有实测对比）。antel 调用时只用**显式目标**（且调用前先删掉这些目标），因此默认路径的正确性不依赖 make 的依赖检查；`-include` 是为了有人手工 `make -f <输出目录>/antel.mk` 时行为仍然正确。
+注：`-MF $@.d`（落成 `x.o.d`）与 `-include` 的命名必须一致（§4.1 有实测对比）。antel 调用时只用**显式目标**（且调用前先删掉这些目标），因此默认路径的正确性不依赖 make 的依赖检查；`-include` 是为了有人手工 `make -f <输出目录>/log/antel.mk` 时行为仍然正确。
 
 ### C. compile_commands.json 形态
 
