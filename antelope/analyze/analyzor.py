@@ -507,7 +507,7 @@ def render_report(report:dict) -> str:
     log_rows = ''
     for entry in report['logs']:
         log_rows += (f'<tr><td class="mono small">{esc(entry["name"])}</td>'
-                     f'<td>{entry["size"]}</td></tr>')
+                     f'<td>{scaled(entry["size"])}</td></tr>')
 
     # 资源情况（配置了才有区块）
     resource_html = resource_section(report['resources'])
@@ -620,7 +620,7 @@ summary {{ cursor: pointer; color: #7dd3fc; }}
 
   <h2>日志产物</h2>
   <table>
-    <tr><th>文件</th><th>大小（字节）</th></tr>
+    <tr><th>文件</th><th>大小</th></tr>
     {log_rows if log_rows else '<tr><td colspan="2">log/ 为空</td></tr>'}
   </table>
 </div>
