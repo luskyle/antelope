@@ -180,6 +180,31 @@ extern const unsigned char _binary_assets_logo_png_end[];
 
 嵌入文件进入 hash 基线：修改后 `antel build` 会重新生成 `.o` 并重链接（即使没有源文件变化）。产物在 `<输出目录>/obj/embed_<序号>.o`，随 `antel clean` 回收。
 
+## 一个完整的配置示例
+
+把上面所有字段放在一起，一个「GUI 可执行程序 + 第三方库 + 三种资源形态」的完整配置（取自 `test/resdemo`，运行效果见[示例与效果图](examples.md)）：
+
+```json
+{
+    "projectName": "resdemo",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "source": ["src/main.c"],
+    "exclude_source": [],
+    "include_directories": ["include"],
+    "compile_args": ["-O2", "-Wall"],
+    "link_args": ["-lm"],
+    "analyze_files": ["src/main.c"],
+    "jobs": 8,
+    "backend": "auto",
+    "compile_commands": true,
+    "pkg_config": ["libadwaita-1"],
+    "data_files": ["assets"],
+    "gresource": "gresource.gresource.xml",
+    "embed": ["assets/payload.bin"]
+}
+```
+
 ## 构建目录
 
 输出目录是 `./<projectName>_<配置文件名>/`：配置文件名 `antel.json`、项目名 `helloworld`，输出目录就是 `helloworld_antel/`。

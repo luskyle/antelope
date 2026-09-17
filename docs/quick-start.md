@@ -67,4 +67,6 @@ helloworld_antel/
 
 - 想搞明白「什么时候会重编、为什么」→ [增量构建](incremental-build.md)
 - 要生成静态库或共享库 → [配置参考](configuration.md)与[编译器支持](compilers.md)
+- 想用第三方库或打包运行资源 → [配置参考](configuration.md) 里的 `pkg_config` / `data_files` / `gresource` / `embed`
+- 想看完整可运行的工程长什么样 → [示例与效果图](examples.md)（GTK 计算器、资源打包演示）
 - 想接进 CI 或脚本 → [命令参考](commands.md)里的退出码约定

@@ -39,6 +39,7 @@ nav:
   - 简介: index.md
   - 快速开始: quick-start.md
   - 配置参考: configuration.md
+  - 示例与效果图: examples.md
   - 命令参考: commands.md
   - 增量构建: incremental-build.md
   - 编译器支持: compilers.md
