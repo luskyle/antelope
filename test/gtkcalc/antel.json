@@ -1,0 +1,19 @@
+{
+    "projectName": "gtkcalc",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "source": [
+        "main.c"
+    ],
+    "exclude_source": [],
+    "include_directories": [],
+    "compile_args": [
+        "-O2",
+        "-Wall"
+    ],
+    "link_args": [],
+    "analyze_files": [],
+    "pkg_config": [
+        "libadwaita-1"
+    ]
+}
