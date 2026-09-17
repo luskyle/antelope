@@ -1,5 +1,6 @@
 from alive_progress import alive_bar
 import os
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -16,7 +17,8 @@ class Compiler():
                 include_directories_global:list=[], target_type_global:TargetType=TargetType.Static,
                 compiler_global:CompilerType=CompilerType.gxx, compiler_args_list_global:list=[],
                 link_args_list_global:list=[], output_dir:str='.', jobs:int=1,
-                compile_commands:bool=True, pkg_cflags:list=[]):
+                compile_commands:bool=True, pkg_cflags:list=[], sanitize:list=[],
+                coverage:bool=False):
         self.project_name = project_name_global
         self.source = list(source_global)
         self.include_directories = list(include_directories_global)
@@ -28,6 +30,8 @@ class Compiler():
         self.jobs = jobs
         self.compile_commands = compile_commands
         self.pkg_cflags = list(pkg_cflags)
+        self.sanitize = list(sanitize)
+        self.coverage = coverage
 
         self.dir = Directory()
         self.log = Log(output_dir)
@@ -67,6 +71,8 @@ class Compiler():
             obj = f'{self.output_dir}/obj/{obj_file}'
 
             args = list(compile_args)
+            args += self.sanitize_args()
+            args += self.coverage_args()
             args += list(self.pkg_cflags)
             args += self.parse_dep_file_args(obj)
             args += ['-c', '-o', obj, source]
@@ -75,6 +81,16 @@ class Compiler():
             units.append(CompileUnit(source=source, obj=obj, dep=f'{obj}.d',
                                     driver=self.compile_driver(source), args=args))
         return units
+
+    def sanitize_args(self):
+        """消毒器参数：每个 -fsanitize=<item>，编译与链接共用"""
+        return [f'-fsanitize={item}' for item in self.sanitize]
+
+    def coverage_args(self):
+        """覆盖率参数：编译 -fprofile-arcs -ftest-coverage（.gcno），链接 --coverage（.gcda 运行时生成）"""
+        if not self.coverage:
+            return []
+        return ['-fprofile-arcs', '-ftest-coverage']
 
     def compile_driver(self, source:str):
         """按编译器类型与源文件后缀选择驱动。.c 走 C 编译器，其余走 C++ 编译器"""
@@ -94,41 +110,64 @@ class Compiler():
         return ['-MMD', '-MF', f'{obj_item}.d']
 
     def run_units(self, units:list):
-        """按 jobs 并发执行编译单元。任一失败即停止派发，并以非 0 退出"""
+        """
+        按 jobs 并发执行编译单元。任一失败即停止派发，并以非 0 退出。
+
+        诊断聚合（P2-1）：每个单元的输出在后台捕获，构建成功时只汇总
+        警告数（静默，不刷屏）；失败时按文件分组整块回放，给出计数。
+        """
         if units.__len__() == 0:
             return
 
         jobs = max(1, min(self.jobs, units.__len__()))
         stop = threading.Event()
         failures = []
+        outputs = {}
 
         with alive_bar(units.__len__()) as bar:
             if jobs == 1:
                 for unit in units:
-                    self.run_unit(unit, stop, failures)
+                    self.run_unit(unit, stop, failures, outputs)
                     bar()
             else:
                 with ThreadPoolExecutor(max_workers=jobs) as pool:
-                    futures = [pool.submit(self.run_unit, unit, stop, failures) for unit in units]
+                    futures = [pool.submit(self.run_unit, unit, stop, failures, outputs) for unit in units]
                     for future in as_completed(futures):
                         future.result()
                         bar()
 
         if failures.__len__() != 0:
+            self.report_diagnostics(failures, outputs, units)
             unit, error = failures[0]
             raise CommandError(error.command, error.return_code, error.output,
                             reason=f'{failures.__len__()}/{units.__len__()} 个编译单元失败，'
                                    f'首个失败源文件：{unit.source}')
 
-    def run_unit(self, unit:CompileUnit, stop:threading.Event, failures:list):
+        warnings = sum(outputs.get(id(unit), '').count('warning:') for unit in units)
+        if warnings != 0:
+            print(f'编译完成，共 {warnings} 条警告（详见表头下的编译输出）')
+
+    def report_diagnostics(self, failures:list, outputs:dict, units:list):
+        """失败时按源文件分组回放各单元的完整输出，并统计警告数"""
+        print(f'==============================')
+        print(f'编译失败：{failures.__len__()}/{units.__len__()} 个编译单元 '
+              f'（警告数：{sum(outputs.get(id(unit), "").count("warning:") for unit in units)}）')
+        for unit, error in failures:
+            print(f'---- {unit.source} ----')
+            if error.output != '':
+                sys.stdout.write(error.output if error.output.endswith('\n') else error.output + '\n')
+
+    def run_unit(self, unit:CompileUnit, stop:threading.Event, failures:list, outputs:dict):
         """执行单个编译单元。已收到停止信号则跳过，避免失败后继续做无用功"""
         if stop.is_set():
             return
 
         try:
-            self.command.run_argv(unit.argv())
+            output = self.command.run_argv(unit.argv(), capture=True)
+            outputs[id(unit)] = output
         except BuildError as error:
             stop.set()
+            outputs[id(unit)] = error.output if error.output else ''
             failures.append((unit, error))
 
     def write_compile_commands(self, units:list):
