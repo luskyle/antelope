@@ -30,7 +30,7 @@ jobs:
       - name: 端到端冒烟（真实编译链接）
         run: |
           set -o pipefail
-          cd test
+          cd test/helloworld
           antel rebuild
           antel run | grep -q 'hello world'
 
