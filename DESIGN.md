@@ -46,10 +46,10 @@ antelope 当前的工作方式：读 `antel.json` → 逐个编译单元调用 `
 | 3  | 依赖驱动的增量（头文件变更）          | ✅      | hash +`-MMD`；实测改单文件重编 1、改公共头重编 150                              |
 | 4  | 失败即中断 + 非 0 退出码              | ✅      | `errors.py` + CLI 装饰器                                                        |
 | 5  | 产物可追溯（命令脚本 / 符号 / 依赖）  | ✅      | `log/<项目名>_link.sh`、`readelf/nm/ldd/objdump` 分析                         |
-| 6  | **并行编译**                    | ❌      | `compiler/compiler.py:37-38` 串行 `for` + `alive_bar`                       |
-| 7  | **响应文件 `@file`**          | ❌      | 实测 gcc 支持；本项目靠拼接字符串，超长命令行无出路                               |
-| 8  | **结构化参数**                  | ❌      | `os_ops/command.py:16` 把自拼字符串再 `shlex.split`，含空格或引号的参数会走样 |
-| 9  | **compile_commands.json**       | ❌      | 数据（每条命令）已具备，仅缺输出；clangd/IDE 接入依赖它                           |
+| 6  | **并行编译**                    | ✅      | `Compiler.run_units` 线程池 + `jobs`；150 TU：3.87s → 1.11s（Phase 0）        |
+| 7  | **响应文件 `@file`**          | ✅      | `Linker.plan_response_file` 超阈值改写；`ar` 不支持 `@file` 已排除（Phase 0） |
+| 8  | **结构化参数**                  | ✅      | `Command.run_argv`；含空格路径实测通过（旧实现报 `-o` 与 `-c` 冲突）（Phase 0） |
+| 9  | **compile_commands.json**       | ✅      | 每次构建输出 `<输出目录>/compile_commands.json`，结构化 `arguments`（Phase 0） |
 | 10 | PCH 预编译头                          | ❌      | 实测`g++ -x c++-header` 可产出 `.gch`（1.92 MB）                              |
 | 11 | LTO                                   | ❌      | 实测`-flto` + `gcc-ar` + `gcc-nm` + 链接可执行全链路通                      |
 | 12 | 动态库 soname / 版本化 / rpath        | ❌      | 当前只产出`lib<项目名>.so` 平铺                                                 |
@@ -117,36 +117,38 @@ class BuildPlan:
 
 ### 3.2 执行模型
 
-| 后端              | 执行方式                                                                               | 增量判定                                  | 适用场景                                         |
-| ----------------- | -------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------ |
-| `antel`（默认） | 线程池并发执行`CompileUnit`（子进程为 IO-bound，无需多进程）；`alive_bar` 手动推进 | hash 基线 + 依赖文件（现状）              | 日常构建、需要详细日志与产物分析                 |
-| `make`          | 生成 Makefile 并`make -j$jobs` 执行                                                  | 交给 make（mtime +`-include` 依赖文件） | 需要`-j` / jobserver、或工程已有 make 使用习惯 |
+**分工固定为：antel 决定"编什么"，make 负责"怎么并行编完"。**
 
-从 make 内部调用 `antel` 时，应透传 jobserver 信息（`MAKEFLAGS`），避免嵌套并行时超额占用 CPU。
+| 后端            | 执行方式                                                                          | 增量判定                      | 适用场景                            |
+| --------------- | --------------------------------------------------------------------------------- | ----------------------------- | ----------------------------------- |
+| `make`（默认）  | antel 生成内部规则文件，按"本轮过期目标"显式调用 `make -f <规则> -j$jobs <目标>` | hash 基线 + 依赖文件（antel） | 默认路径；拿 make 的并行与 jobserver |
+| `antel`（回退） | 线程池并发执行 `CompileUnit`（子进程为 IO-bound）；`alive_bar` 手动推进           | 同上                          | 机器上没有 make 时自动回退          |
 
-### 3.3 增量权威约定（核心决策，必须先定）
+三条实现约定（均已实测，依据见 §4.2）：
 
-两套增量模型（hash vs mtime）不能并行，否则会出现"一边认为要重编、另一边认为不用"的静默不一致——这正是本项目历史上最难排查的一类问题。两种方案：
+1. 内部规则文件由 antel 每次构建重新生成，放在输出目录内并带"生成物勿改"标记。**它不是交付物**，项目根不会出现 Makefile。
+2. 把过期目标交给 make 之前**先删掉这些目标文件**：make 按 mtime 判定，实测"把已是最新的目标交给 make"会被跳过（输出 `已是最新`）；而按 hash 判定它们确实过期，删掉才能确保重建，也避免"头文件时间戳早于目标文件"导致的漏编。
+3. make 的失败退出码（实测失败为 2）由 antel 转成自己的非 0 退出并保留输出到 `log/`；从 make 内部调用 antel 时透传 jobserver 信息。
 
-- **方案 A（推荐）：共享 `obj/` 与 `*.o.d`**。make 与 antel 共用同一份目标文件与依赖文件，切换后端不需要重新全量编译。
-- **方案 B：分离目录**（`obj/` 归 antel、`obj-make/` 归 make）。互不干扰，代价是磁盘翻倍与"两套真相"，切换后端必然全量重编。
+### 3.3 增量权威归属
 
-**方案 A 的实测行为（不是猜测，见附录 A 复现）**：
+结论：**增量判定只归 antel，make 不参与判定**。make 只收到显式目标，且这些目标在调用前已被删除，因此不存在"一方认为要重编、另一方认为不用"的分歧——这正是选择"显式目标 + 先删目标"而不是"整包交给 make"的原因。
 
-| 序列                             | 结果                                         | 解释                                                                                                          |
-| -------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `make` 构建 → `antel build` | `发生变化的文件：1`、`需重新编译文件：1` | antelope 的 hash 基线是**独立簿记**，make 不会更新它，于是刚被 make 编译过的文件在 antel 看来仍是"变化" |
-| `antel rebuild` → `make -n` | 计划重编`0` 个                             | make 用 mtime 判定，antel 产出的目标文件比输入新，判定一致                                                    |
+以下实测事实说明为什么不能让 make 参与判定：
 
-也就是说：**方案 A 不会漏编（安全方向），但会出现冗余重编**。冗余重编不影响产物正确性，但会破坏"两边不重复劳动"的预期，也会让 CI 时长失真。
+| 序列                                | 结果                                     | 解释                                                    |
+| ----------------------------------- | ---------------------------------------- | ------------------------------------------------------- |
+| 把已是最新的目标交给 make            | make 输出"已是最新"并跳过                 | make 按 mtime 判定，与 hash 判定不等价                   |
+| `make`（整包）构建 → `antel build` | `发生变化的文件：1`、`需重新编译文件：1` | antel 的 hash 基线是独立簿记，make 不会更新它 → 冗余重编 |
+| `antel rebuild` → `make -n`        | 计划重编 `0` 个                          | antel 产出的目标文件比输入新，此时两者一致               |
 
-**消除冗余的办法**：提供一条轻量命令 `antel sync-baseline`（只刷新 hash 基线，不编译），并在生成的 Makefile 的 `all` 目标末尾调用它。这样两种后端的簿记在每次构建后都对齐，交替执行不再产生额外编译。
+`antel sync-baseline` 因此降级为**边角工具**：只在有人手工跑过内部规则文件（绕过 antel 的簿记）之后，用它把 hash 基线对齐。
 
 **一致性测试的断言**（不要断言"集合完全相等"，它在内容等价时会误报）：
 
 1. **不漏编**：任意修改序列后，产物内容必须与输入内容一致（用输入 hash ↔ 产物 hash 的对应关系校验，而不是只看时间戳）。
-2. **产物等价**：同一棵树分别用两种后端构建，产物（可执行文件、静态库）字节一致。
-3. **无冗余**：接入 `sync-baseline` 后，交替构建不应产生多余编译。
+2. **产物等价**：同一轮判定下，两种后端的产物（可执行文件、静态库）字节一致。
+3. **不被 make 跳过**：交给 make 的过期目标必须真的重编（对应 §3.2 的约定 2）。
 
 ### 3.4 配置与 CLI 扩展
 
@@ -155,7 +157,7 @@ class BuildPlan:
 | 字段                        | 类型        | 默认                  | 说明                                          |
 | --------------------------- | ----------- | --------------------- | --------------------------------------------- |
 | `jobs`                    | 整数        | `min(8, cpu_count)` | 并行度；`1` 即串行                          |
-| `backend`                 | 字符串      | `antel`             | `antel` / `make`                          |
+| `backend`                 | 字符串      | `auto`              | `auto`（默认：优先用 make，缺失时回退到内置执行器并提示）/ `make` / `antel` |
 | `response_file`           | 布尔        | `auto`              | 命令行超阈值时自动改用`@file`               |
 | `compile_commands`        | 布尔        | `true`              | 是否输出`compile_commands.json`             |
 | `lto`                     | 布尔        | `false`             | 编译/链接加`-flto`，归档工具切到 `gcc-ar` |
@@ -169,18 +171,17 @@ class BuildPlan:
 
 新增命令：
 
-| 命令                                 | 说明                                                                |
-| ------------------------------------ | ------------------------------------------------------------------- |
-| `antel gen-makefile [-o Makefile]` | 由当前配置生成可独立运行的 Makefile                                 |
-| `antel make [-- <args>]`           | 转交 make 执行并接管输出、退出码与日志                              |
-| `antel sync-baseline`              | 只刷新 hash 基线，不编译；供 make 构建后对齐两种后端的簿记（§3.3） |
-| `antel install`                    | 安装到`install.prefix`                                            |
+| 命令                      | 说明                                                                     |
+| ------------------------- | ------------------------------------------------------------------------ |
+| `antel sync-baseline`     | 只刷新 hash 基线，不编译；手工跑过内部规则文件之后用它对齐簿记（§3.3） |
+| `antel install`           | 安装到 `install.prefix`（Phase 2）                                      |
+| `antel make [-- <args>]`  | 转交既有 Makefile 执行并接管输出、退出码与日志（Phase 3）               |
 
 ## 4. 可行性判定
 
-### 4.1 生成 Makefile：可行（推荐先做）
+### 4.1 复用 `-MMD` 依赖文件（与 make 的契合点）
 
-**契合点**：本项目已经产出 `-MMD` 依赖文件，而 `-MMD` 的输出本身就是 make 依赖语法，Makefile 里 `-include` 即可复用，不需要重新发明依赖跟踪。
+**契合点**：本项目已经产出 `-MMD` 依赖文件，而 `-MMD` 的输出本身就是 make 依赖语法，规则文件里 `-include` 即可复用，不需要重新发明依赖跟踪。
 
 **实测**（150 TU）：
 
@@ -190,11 +191,26 @@ class BuildPlan:
 | 同上                                                                            | 改公共头      | 150 ✅                  |
 | 错位：`-MF $@.d`（落成 `x.o.d`）配 `-include $(OBJS:.o=.d)`（找 `x.d`） | 改公共头      | **0（静默失效）** |
 
-**结论**：命名必须对齐。本项目当前用的是 `x.o.d`，因此生成的 Makefile 应写 `-MF $@.d` 并 `-include $(OBJS:%=%.d)`——附录 B 的模板已按此实测通过（全量构建、无改动空跑、改源文件重编 1 个）。这条错位会直接复现"改了东西却什么都没重编"的老问题，必须用测试锁住。
+**结论**：命名必须对齐。本项目当前用的是 `x.o.d`，因此内部规则文件应写 `-MF $@.d` 并 `-include $(OBJS:%=%.d)`——附录 B 的规则文件草案已按此实测通过（全量构建、无改动空跑、改源文件重编 1 个）。这条错位会直接复现"改了东西却什么都没重编"的老问题，必须用测试锁住。需要说明的是：默认路径（antel 显式目标 + 先删目标）下正确性不依赖 make 的依赖检查，命名对齐主要保障"有人手工跑规则文件"的场景。
 
-### 4.2 make 当并行后端：可行
+### 4.2 用 make 执行编译（默认路径）：可行，机制已验证
 
-生成一个内部 Makefile 并 `make -jN` 即可获得并行与 jobserver，无需自行实现任务调度。代价是多一层进程、错误定位链变长（make 的输出需要归并回 antel 的日志模型），且"make 不参与判定、只负责执行"这一分工必须写进文档。
+make 必须有规则来源，因此"直接调用 make"落地为：antel 生成**内部规则文件**（输出目录内、每次重建、标为生成物）并以**显式目标**调用它。实测（命令见附录 A）：
+
+| 调用形态                              | 结果                                        |
+| ------------------------------------- | ------------------------------------------- |
+| `make -f -`（从 stdin 读规则）        | 可用（备选形态：完全不在磁盘留下规则文件）  |
+| 内部规则文件 + 显式目标 + `-j4`       | 只编点名的目标 ✓                            |
+| 把已是最新的目标交给 make             | 输出"已是最新"并跳过 → **因此必须先删目标** |
+| make 失败退出码                       | 2（"非 0 即失败"成立）                      |
+
+性能上这也是更优选择：同一棵 150 TU 的树，`make -j8` 为 0.78s，Phase 0 的内置线程池为 1.11s（make 的每单元开销更低）。
+
+代价与约束：
+
+- 多一层进程，错误信息需要转译（make 的输出归并进 `log/`）
+- 规则必须按**显式目标**逐单元生成：antelope 的目标文件名是扁平化的（`src/main.c` → `obj/src_main.o`），无法用模式规则表达这种对应关系
+- 机器上没有 make 时回退到内置线程池，并在输出中提示
 
 ### 4.3 驱动现有 Makefile：可行但浅
 
@@ -258,20 +274,20 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 
 回归证据：测试从 3 条增至 9 条。其中"路径含空格"用例在 Phase 0 之前必然失败（旧实现报 `gcc: fatal error: cannot specify '-o' with '-c' ... with multiple files`，退出码 1），当前通过。
 
-下一步：Phase 1（Makefile 生成 + `antel sync-baseline` + 跨实现一致性测试）。
+下一步：Phase 1（make 作为执行后端：内部规则文件 + `backend` 回退 + 跨实现一致性测试）。
 
-### Phase 1：Makefile 生成与 make 后端（2-3 天）
+### Phase 1：make 作为执行后端（2-3 天）
 
-**目标**：同一份配置既能 `antel build`，也能 `make`。
+**目标**：默认用 make 执行编译，同时保持 antel 的增量判定精度。
 
-- 新增 `antelope/makefile.py`：`render(plan) -> str`，模板见附录 B（已实测）
-- CLI 增加 `antel gen-makefile` 与 `antel sync-baseline`；配置支持 `backend: make`
-- 依赖文件命名对齐 `x.o.d`（`-MF $@.d` + `-include $(OBJS:%=%.d)`）；`MAKEFLAGS += -j$(JOBS)`；`clean`/`rebuild` 目标与 antel 语义一致
-- 生成的 Makefile 在 `all` 目标末尾调用 `antel sync-baseline`，消除 §3.3 的冗余重编
-- 落实 §3.3 的增量权威约定
-- **跨实现一致性测试**：按 §3.3 的三条断言（不漏编 / 产物字节等价 / 无冗余重编）
+- 新增 `antelope/makefile.py`：把 `BuildPlan` 渲染成**内部规则文件**（逐单元显式规则 + 链接目标 + `-include` 依赖文件 + "生成物勿改"标记），写入 `<输出目录>/antel.mk`，每次构建重建
+- 新增 make 执行器：`make -f <输出目录>/antel.mk -j$jobs <本轮过期目标>`，**执行前先删除这些目标文件**（§3.2 约定 2）
+- 配置字段 `backend`：`auto`（默认，优先 make，缺失时回退内置线程池并提示）/ `make` / `antel`
+- 从 make 内部调用 antel 时透传 jobserver（`MAKEFLAGS`）
+- `antel sync-baseline`：保留为边角工具（手工跑过内部规则文件后对齐 hash 基线）
+- **跨实现一致性测试**：按 §3.3 的三条断言（不漏编 / 两种后端产物字节等价 / 不被 make 跳过）
 
-**验收**：生成的 Makefile 在干净树上 `make -j8` 成功且产物可运行；改公共头后 `make` 与 `antel build` 都不漏编；接入 `sync-baseline` 后交替构建不产生额外编译；两种后端的可执行文件字节一致。
+**验收**：150 TU 在默认配置下走 make 且总耗时不高于内置线程池后端；改公共头后两种后端的重编集合一致；无 make 的环境自动回退，产物与走 make 时字节一致。
 
 ### Phase 2：gcc 能力面补齐（4-6 天）
 
@@ -297,18 +313,19 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | 单元         | plan 生成（参数列表、命名规则、转义）、依赖文件解析、响应文件阈值                                                                |
 | 集成         | 现有三条真实构建用例扩展：并行/串行等价、make 与 antel 交替、长路径与空格路径                                                    |
-| 跨实现一致性 | §3.3 的三条断言：不漏编（输入 hash ↔ 产物一致）、两种后端产物字节等价、接入`sync-baseline` 后无冗余重编（Phase 1 起纳入 CI） |
-| 性能基线     | 150 TU 场景记录耗时；并行开启后应 <1.0s（当前 3.9s）                                                                             |
+| 跨实现一致性 | §3.3 的三条断言：不漏编（输入 hash ↔ 产物一致）、两种后端产物字节等价、交给 make 的过期目标必须真的重编（Phase 1 起纳入 CI） |
+| 性能基线     | 150 TU 场景记录耗时；Phase 0 实测内置线程池 1.11s，走 make 后应不高于它（对照：`make -j8` 0.78s，不含 hash 判定与产物分析） |
 | 回归         | `compile_commands.json`、既有日志产物（命令脚本、符号分析）不丢失                                                              |
 
 ## 7. 风险与缓解
 
 | 风险                             | 影响                        | 缓解                                                                          |
 | -------------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
-| 增量双真相（hash vs mtime）      | 静默过期产物                | §3.3 约定 + 跨实现一致性测试                                                 |
-| 交替构建产生冗余重编             | CI 时长失真、误判"没有生效" | `antel sync-baseline` 挂在生成的 Makefile 的 `all` 末尾（§3.3 实测依据） |
+| 增量判定被 make 的 mtime 语义干扰 | 静默过期产物或冗余重编      | make 只收显式目标、且这些目标在调用前已被删除（§3.2/§3.3）；跨实现一致性测试兜住 |
+| 机器上没有 make                  | 构建无法进行                | `backend: auto` 回退到内置线程池并提示；两种后端产物字节等价由测试保证        |
 | 参数结构化波及所有调用点         | 一次性改动面较大            | 集中在 Phase 0；compiler/linker/analyze/文档/模板一并更新                     |
-| make 侧依赖文件命名错位          | 静默不重编                  | 命名对齐 + §4.1 的测试用例                                                   |
+| 手工跑内部规则文件后与基线错位   | 下次 antel 构建冗余重编     | 规则文件标注"生成物勿改"；必要时用 `antel sync-baseline` 对齐                |
+| 内部规则文件被误当交付物或被手改 | 行为与预期不符              | 每次构建重建、头部带生成标记、文档明确它不是交付物                            |
 | msvc 无`-MMD`                  | 其目标每次重编              | 保持现状并在文档标注；扩展能力时同样映射                                      |
 | 嵌套并行（antel 被 make 调用）   | CPU 超额占用                | 透传 jobserver 信息                                                           |
 | 工具注入参数与用户参数的边界模糊 | 参数冲突难排查              | 文档中列出"由工具注入"的参数清单                                              |
@@ -349,8 +366,14 @@ make -n | grep -c 'gcc '     # 改公共头后应为 150，改单个源文件后
 # 响应文件
 printf -- '-O1 -I . -MMD -MF rsp.d -c -o rsp.o u001.c\n' > args.rsp && gcc @args.rsp
 
-# 两种后端交替（§3.3 的实测依据）
-make -j8                     # make 构建
+# make 的调用形态（§4.2 的实测依据）
+printf 'all:\n\t@echo ok\n' | make -f -        # 从 stdin 读规则，不落盘
+make -f antel.mk -j4 obj/a.o obj/b.o           # 显式目标 + 并行
+make -f antel.mk obj/a.o                       # 观察："已是最新"并跳过 → 所以要先删目标
+make -f antel.mk obj/bad.o ; echo $?           # 观察：失败退出码 2
+
+# 为什么不让 make 参与判定（§3.3 的实测依据）
+make -j8                     # make 整包构建
 antel build                  # 观察：发生变化的文件 1 / 需重新编译文件 1（hash 基线未共享）
 antel rebuild                # antel 构建
 make -n | grep -c 'gcc '     # 观察：0（make 认可 antel 的产物）
@@ -363,45 +386,38 @@ gcc -O2 -flto main.c liblto.a -o lto_exe
 g++ -x c++-header inc/common.h -o pch.gch
 ```
 
-### B. 生成的 Makefile 草案
+### B. 内部规则文件（`<输出目录>/antel.mk`）草案
 
 ```make
-# 由 antel gen-makefile 生成，请勿手改
-PROJECT   := helloworld
-BACKEND   := make
-CC        := gcc
-CXX       := g++
-CFLAGS    := -std=c++17 -Os -fPIC -I include
-LDFLAGS   :=
-LDLIBS    := -lm
-JOBS      ?= 8
-OBJDIR    := helloworld_antel/obj
-TARGET    := helloworld_antel/helloworld
+# 由 antel 生成，请勿手改（每次构建重建）
+OBJDIR  := helloworld_antel/obj
+TARGET  := helloworld_antel/helloworld
+CC      := gcc
+CXX     := g++
+CFLAGS  := -std=c++17 -Os -fPIC -I include
+LDLIBS  := -lm
 
-SRCS      := helloworld.c
-OBJS      := $(SRCS:%.c=$(OBJDIR)/%.o)
-DEPS      := $(OBJS:%=%.d)
-
-.PHONY: all clean rebuild
+.PHONY: all
 all: $(TARGET)
-	@antel sync-baseline -f antel        # 对齐 antel 的 hash 基线（Phase 1 引入，§3.3）
 
-$(TARGET): $(OBJS)
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
-$(OBJDIR)/%.o: %.c
+# 逐单元显式规则：目标文件名是扁平化的（src/main.c → obj/src_main.o），
+# 无法用模式规则表达这种对应关系，所以由 antel 逐个生成
+$(OBJDIR)/src_main.o: src/main.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MF $@.d -c -o $@ $<
 
-clean:
-	rm -rf $(OBJDIR) $(TARGET)
-rebuild: clean all
+$(OBJDIR)/src_util.o: src/util.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MF $@.d -c -o $@ $<
 
-MAKEFLAGS += -j$(JOBS)
--include $(DEPS)
+$(TARGET): $(OBJDIR)/src_main.o $(OBJDIR)/src_util.o
+	$(CXX) -s -o $@ $^ -Wl,--add-needed -lc -lm $(LDLIBS)
+
+# 只为"有人手工跑这个文件"保留依赖语义；antel 调用时会先删目标，不依赖它
+-include $(OBJDIR)/src_main.o.d $(OBJDIR)/src_util.o.d
 ```
 
-注：`-MF $@.d`（落成 `x.o.d`）与 `-include $(OBJS:%=%.d)` 必须同时用这一套命名，才能与 antel 现有的依赖文件命名一致（§4.1 有实测对比）。本模板已在 `test/` 样例上实测：全量构建成功、产物可运行、无改动时空跑、改源文件重编 1 个。
+注：`-MF $@.d`（落成 `x.o.d`）与 `-include` 的命名必须一致（§4.1 有实测对比）。antel 调用时只用**显式目标**（且调用前先删掉这些目标），因此默认路径的正确性不依赖 make 的依赖检查；`-include` 是为了有人手工 `make -f <输出目录>/antel.mk` 时行为仍然正确。
 
 ### C. compile_commands.json 形态
 
