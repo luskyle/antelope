@@ -130,3 +130,22 @@ def test_clean_removes_version_links(project):
 
     antel('clean')
     assert not (project / 'demo_antel').exists()
+
+
+def test_static_library_links_successfully(project):
+    """static 目标必须产出 libX.a（回归：P2-4 重构后 static 分支缺失 output 变量）"""
+    (project / 'src' / 'main.c').write_text(
+        '#include <stdio.h>\n'
+        'int lib_value(void){ return 7; }\n'
+        'int main(){ printf("v=%d\\n", lib_value()); return 0; }\n')
+    write_config(project, source=['src/main.c'], target_type='static', compile_args=['-w'])
+
+    result = antel('rebuild')
+
+    assert result.exit_code == 0, result.output
+    archive = project / 'demo_antel' / 'libdemo.a'
+    assert archive.exists()
+    # 归档里应包含目标文件与符号
+    listing = subprocess.run(['ar', '-t', str(archive)],
+                             capture_output=True, text=True).stdout
+    assert 'src_main.o' in listing

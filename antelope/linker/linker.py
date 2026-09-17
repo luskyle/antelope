@@ -110,7 +110,8 @@ class Linker():
         """构造链接作业。共享库与可执行程序经编译器驱动链接，才能自动带上 crt 与运行时"""
         if self.target_type == TargetType.Static:
             driver = 'ar'
-            args = ['csr', f'{self.output_dir}/lib{self.project_name}.a'] + objs
+            output = f'{self.output_dir}/lib{self.project_name}.a'
+            args = ['csr', output] + objs
         elif self.target_type == TargetType.Shared:
             driver = self.link_driver()
             output = self.shared_lib_path()
