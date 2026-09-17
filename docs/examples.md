@@ -156,3 +156,68 @@ antel rebuild
 
 !!! note "为什么能放心走增量"
     `glib-compile-resources` 对同样的输入生成**逐字节相同**的输出（已实测），因此 gresource 源可以安全进入 antel 的 hash 基线；`ld -r -b binary` 的符号命名是确定的规则：`assets/payload.bin` → `_binary_assets_payload_bin_start/_end/_size`（路径里非字母数字字符全部换成下划线）。这两条是设计文档（DESIGN.md）与测试里明确的契约。
+
+## antelstats：版本化动态库 + 消毒器/覆盖率
+
+位置：`test/antelstats/`。一个统计分析命令行工具，四个配置文件做成同一个库/工具的四种构建形态：
+
+```text
+test/antelstats/
+├── antel.json    # 版本化共享库 libantelstats.so.1.0.0（多文件：stats/csv/version）
+├── app.json      # 可执行程序：按 soname 链接库，rpath 加载运行
+├── cov.json      # 同 app，但 coverage: true → 运行后 gcov 出覆盖率报告
+├── san.json      # 同 app，但 sanitize: ["address"] → ASan 抓内存 bug
+├── src/          # antelstats.h / stats.c / csv.c / version.c / main.c
+└── data.csv      # 示例数据
+```
+
+**antel.json**（版本化共享库）：
+
+```json
+{
+    "projectName": "antelstats",
+    "target_type": "shared",
+    "compiler": "gxx",
+    "source": ["src/stats.c", "src/csv.c", "src/version.c"],
+    "include_directories": ["src"],
+    "compile_args": ["-O2", "-Wall", "-fPIC"],
+    "version": "1.0.0"
+}
+```
+
+构建后输出目录里是：`libantelstats.so.1.0.0`（真实文件）+ `libantelstats.so.1`、`libantelstats.so` 两条软链；`readelf -d` 显示 `SONAME = libantelstats.so.1`。
+
+**app.json**（可执行消费者，按 soname 链接与加载）：
+
+```json
+{
+    "projectName": "app",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "source": ["src/main.c"],
+    "compile_args": ["-O2", "-Wall", "-Isrc"],
+    "link_args": ["-Lantelstats_antel", "-lantelstats"],
+    "rpath": ["$ORIGIN/../antelstats_antel"]
+}
+```
+
+要点：`include_directories` 里的 `.c` 会参与构建（这是设计），所以依赖库的工程**只用 `-I` 拿头文件、不要 `include_directories` 指进库源码目录**，否则库会被静态重编一遍。`rpath` 的 `$ORIGIN` 运行期展开为可执行文件目录，因此 `ldd` 显示的是按 SONAME 加载：
+
+```text
+libantelstats.so.1 => .../antelstats_antel/libantelstats.so.1
+```
+
+**cov.json / san.json**：与 app.json 同构，分别加 `"coverage": true` 与 `"sanitize": ["address"]`。
+
+验证步骤（对应测试 `tests/test_shared_version.py`、`tests/test_sanitize_coverage.py`）：
+
+```bash
+cd test/antelstats
+antel rebuild                 # 版本化共享库 + 软链
+antel rebuild -f app && ./app_app/app data.csv        # 按 soname 运行
+antel rebuild -f cov && ./appcov_cov/appcov data.csv  # 运行后 gcov 出报告
+antel rebuild -f san && ./appsan_san/appsan data.csv --heap-bug  # ASan 报 heap-buffer-overflow
+```
+
+!!! warning "消毒器构建要关优化"
+    `main.c` 里故意留了一个 `--heap-bug` 越界写。实测发现：带 `-O1` 以上编译时 GCC 会把越界访问（未定义行为）优化掉，ASan 检测不到；`san.json` 用 `-O0 -g` 才能稳定复现 `heap-buffer-overflow`。这也是为什么 san.json 与 app.json 的 `compile_args` 不一样。

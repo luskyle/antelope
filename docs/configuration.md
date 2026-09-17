@@ -20,6 +20,11 @@
 | data_files          | 数组       | 否   | 运行资源复制进输出目录，字符串（`from==to`）或 `{"from": 源, "to": 目标}` |
 | gresource           | 字符串     | 否   | GLib 资源描述文件（`.gresource.xml`），资源编进可执行文件（单文件分发） |
 | embed               | 字符串数组 | 否   | 任意二进制嵌入可执行文件（单文件分发），程序用 `_binary_` 符号访问 |
+| sanitize            | 字符串数组 | 否   | 消毒器清单，每个元素编译与链接都加 `-fsanitize=<item>`，如 ["address"] |
+| coverage            | 布尔       | 否   | 是否插桩覆盖率：编译加 `-fprofile-arcs -ftest-coverage`，链接加 `--coverage` |
+| version             | 字符串     | 否   | 共享库版本号（如 `"1.0.0"`），产出 `libX.so.<版本>` 并生成软链 |
+| soname              | 字符串     | 否   | 共享库 soname（如 `"libX.so.1"`），缺省由 version 主版本推导 |
+| rpath               | 字符串数组 | 否   | 链接时加 `-Wl,-rpath,<path>`，便于按 soname 加载共享库 |
 | exclude_source      | 字符串数组 | 否   | 保留字段，当前不参与构建                                             |
 
 !!! warning "取值非法的字段会直接报错退出"
@@ -179,6 +184,73 @@ extern const unsigned char _binary_assets_logo_png_end[];
 ```
 
 嵌入文件进入 hash 基线：修改后 `antel build` 会重新生成 `.o` 并重链接（即使没有源文件变化）。产物在 `<输出目录>/obj/embed_<序号>.o`，随 `antel clean` 回收。
+
+### sanitize
+
+消毒器开关，编译与链接同时生效（链接阶段必须带工具链运行时，例如 ASan 的 `libasan`）：
+
+```json
+{
+  "sanitize": ["address", "undefined"]
+}
+```
+
+每个元素对应一条 `-fsanitize=<item>`，追加在每个编译单元与链接命令里。可以组合多个：
+
+- `address`：内存错误检测（越界、use-after-free）
+- `undefined`：未定义行为检测
+- `leak`、`thread` 等均按 `-fsanitize=` 语义透传，工具链不支持时直接报错
+
+!!! warning "启用消毒器要关优化"
+    带 `-O1` 以上优化时，GCC 会把未定义行为的访问直接优化掉，ASan 插桩也随之消失，导致检测不到。调试内存问题时请配合 `-O0 -g`（见 `test/antelstats/san.json` 的完整做法）。
+
+### coverage
+
+覆盖率插桩：
+
+```json
+{
+  "coverage": true
+}
+```
+
+编译加 `-fprofile-arcs -ftest-coverage`（生成 `.gcno`），链接加 `--coverage`。运行一次可执行程序后，与之对应的 `.gcda` 落在 `obj/` 里（与 `.gcno` 同目录），之后即可用 `gcov`（或 lcov）出报告：
+
+```bash
+antel rebuild && antel run
+cd <输出目录>/obj && gcov <对应目标>.gcda
+```
+
+`.gcno`/`.gcda` 都在输出目录内，`antel clean` 一并回收。
+
+### version / soname / rpath 版本化动态库
+
+`target_type: shared` 时，给库一个版本号，antel 就产出 `libX.so.<版本>` 并生成软链：
+
+```json
+{
+  "target_type": "shared",
+  "version": "1.0.0"
+}
+```
+
+产物与链接参数：
+
+- 真实文件 `libX.so.1.0.0`（链接命令带 `-Wl,-soname,libX.so.1`，soname 由主版本号推导）
+- 软链 `libX.so.1 -> libX.so.1.0.0`、`libX.so -> libX.so.1`，供编译期 `-lX` 与运行期按 soname 查找
+- 显式指定 `soname` 优先于推导，例如 `"soname": "libcustom.so.3"`
+- `GENERATED_TARGETS` 已覆盖 `*.so.*`，rebuild/clean 会回收版本化文件与软链
+
+**消费端**：可执行程序依赖这个库时，用 `link_args` 指到库目录、用 `rpath` 让运行期能找到（`test/antelstats/app.json` 是完整示例）：
+
+```json
+{
+  "link_args": ["-Lantelstats_antel", "-lantelstats"],
+  "rpath": ["$ORIGIN/../antelstats_antel"]
+}
+```
+
+`$ORIGIN` 在运行期展开成可执行文件所在目录，因此 `rpath` 支持相对定位，拷走整个输出目录树也能跑。验证：`readelf -d` 若显示 SONAME 且 `ldd` 能按它解析，说明版本化链路是通的。
 
 ## 一个完整的配置示例
 

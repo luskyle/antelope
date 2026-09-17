@@ -12,3 +12,9 @@ test/log
 test/obj
 test/hello*_*
 *_antel/
+
+cdemo_antel_std11
+# 多配置输出的输出目录（<项目名>_<配置文件名>/，与 *_antel/ 同构）
+*_app/
+*_cov/
+*_san/

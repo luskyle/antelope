@@ -401,6 +401,47 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 - `ld -r -b binary` 与 `objcopy -I binary` 都可用，符号规则一致：`assets/msg.txt` → `_binary_assets_msg_txt_start/_end/_size`（路径中非字母数字字符全换下划线）。选 `ld` 是因为不硬编码目标格式，跨架构更稳
 - 符号名与写入文档的推导规则一致，测试按规则书写并验证通过
 
+#### P2-1 诊断聚合实施记录（已完成，2026-09-17）
+
+交付内容：
+
+- `Compiler.run_units` 改为捕获每个编译单元的输出：成功时只汇总警告数（静默，不逐单元刷屏），失败时按源文件分组整块回放、输出失败计数与警告数，再以非 0 退出
+- `Command.run_argv(capture=True)` 复用既有 capture 能力；别名：`runCaptureOutput` 对成功与失败都返回/携带输出
+
+实测：
+
+- 新增 3 条测试（多失败按文件分组、成功静默、警告计数），总数 30 → **33** 条全绿
+- 代价确认：捕获牺牲了"实时看到诊断"，换取的是并行交错输出可读；PLAN 的风险提示已兑现为设计取舍
+
+#### P2-3 覆盖率与消毒器实施记录（已完成，2026-09-17）
+
+交付内容：
+
+- 配置字段 `sanitize: [...]`（每个元素编译与链接都加 `-fsanitize=<item>`）与 `coverage: true`（编译 `-fprofile-arcs -ftest-coverage`、链接 `--coverage`）
+- `Compiler` / `Linker` 各新增参数；静态库（`ar`）跳过链接侧注入
+- `.gcno/.gcda` 落在 `obj/`（与目标文件同目录），`antel clean` 删除整个输出目录时一并回收
+
+实测：
+
+- 新增 4 条测试（参数注入与 gcov 报告、clean 回收、flags 注入可运行、ASan 真抓越界），总数 33 → **37** 条全绿
+- 关键教训（写入文档与 demo）：**消毒器构建必须关优化**。`-O1` 以上 GCC 会把未定义行为访问直接优化掉，ASan 插桩随之消失——`test/antelstats` 的 `san.json` 用 `-O0 -g` 稳定复现 `heap-buffer-overflow`
+- gcov 输出文件名取源文件 basename（`src/main.c.gcda` → `main.c.gcov`），不是目标文件名——测试按实测校准
+
+#### P2-4 版本化动态库实施记录（已完成，2026-09-17）
+
+交付内容：
+
+- 配置字段 `version`（如 `"1.0.0"`）、`soname`（缺省由 version 主版本推导）、`rpath`（每个元素加 `-Wl,-rpath,<path>`，exe 与 shared 都注入）
+- Shared 目标：产出 `libX.so.<版本>`，链接命令带 `-Wl,-soname`；构建后生成软链 `libX.so.<主版本>` → 真实文件、`libX.so` → `libX.so.<主版本>`；显式 `soname` 优先
+- `analyze_target` 改为跟踪真实版本化文件；`GENERATED_TARGETS` 增加 `*.so.*`，rebuild/clean 回收版本化文件与软链
+- 用户给的 `soname` 可能是相对名（`libcustom.so.2`），统一落到输出目录下再建软链
+
+实测：
+
+- 新增 4 条测试（产物与软链/readelf SONAME、显式 soname、消费端按 soname 链接 + `$ORIGIN` rpath 运行、clean 回收），总数 37 → **41** 条全绿
+- 消费端端到端：`ldd` 显示 `libantelstats.so.1 => .../antelstats_antel/libantelstats.so.1`，按 SONAME 而非文件名解析，印证 `-Wl,-soname` 生效
+- demo 中发现一个配置层陷阱（非工具 bug）：`include_directories` 里的 `.c` 会参与构建（设计使然），消费库的工程若把库源码目录写进 `include_directories`，库会被静态重编进消费端、绕过动态链接。正确做法是只用 `-I` 拿头文件（`compile_args`），`link_args` 负责 `-L/-l`——已写入 `test/antelstats/app.json` 与文档
+
 ### Phase 3：生态互操作（2-3 天，可选）
 
 - `antel make -- …`：转交 make，接管输出/退出码/日志（§4.3）

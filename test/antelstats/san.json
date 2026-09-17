@@ -1,0 +1,27 @@
+{
+    "projectName": "appsan",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "source": [
+        "src/main.c"
+    ],
+    "exclude_source": [],
+    "include_directories": [],
+    "compile_args": [
+        "-O0",
+        "-g",
+        "-Wall",
+        "-Isrc"
+    ],
+    "link_args": [
+        "-Lantelstats_antel",
+        "-lantelstats"
+    ],
+    "analyze_files": [],
+    "rpath": [
+        "$ORIGIN/../antelstats_antel"
+    ],
+    "sanitize": [
+        "address"
+    ]
+}

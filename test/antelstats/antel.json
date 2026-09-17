@@ -1,0 +1,22 @@
+{
+    "projectName": "antelstats",
+    "target_type": "shared",
+    "compiler": "gxx",
+    "source": [
+        "src/stats.c",
+        "src/csv.c",
+        "src/version.c"
+    ],
+    "exclude_source": [],
+    "include_directories": [
+        "src"
+    ],
+    "compile_args": [
+        "-O2",
+        "-Wall",
+        "-fPIC"
+    ],
+    "link_args": [],
+    "analyze_files": [],
+    "version": "1.0.0"
+}
