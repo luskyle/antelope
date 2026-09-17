@@ -40,6 +40,30 @@
 }
 ```
 
+## 版本化共享库
+
+给共享库一个版本号，antel 会产出 `libX.so.<版本>`（如 `libX.so.1.0.0`）并自动生成软链 `libX.so.1` 与 `libX.so`，链接命令带上 `-Wl,-soname`：
+
+```json
+{
+  "target_type": "shared",
+  "version": "1.0.0",
+  "soname": "libX.so.1",   // 可选，缺省由 version 主版本推导
+  "rpath": ["$ORIGIN/lib"] // 可选，消费端运行期到哪找库
+}
+```
+
+消费端按 SONAME 链接与加载（`rpath` 的 `$ORIGIN` 运行期展开为可执行文件目录，拷走整个输出目录树也能跑）：
+
+```json
+{
+  "link_args": ["-L<库输出目录>", "-lX"],
+  "rpath": ["$ORIGIN/../<库输出目录>"]
+}
+```
+
+验证：`readelf -d` 显示 SONAME、`ldd` 按 SONAME 而非文件名解析即可。完整示例见[示例与效果图](examples.md)的 antelstats。
+
 ## 换编译器
 
 同一个项目想用不同编译器构建，用不同的配置文件即可，两者输出目录互不干扰：

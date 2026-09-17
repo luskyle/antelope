@@ -300,11 +300,14 @@ cd <输出目录>/obj && gcov <对应目标>.gcda
 | --- | --- |
 | `<输出目录>/<项目名>` | 可执行目标（`exe`） |
 | `<输出目录>/lib<项目名>.a`、`lib<项目名>.so` | 静态库、共享库目标 |
+| `<输出目录>/lib<项目名>.so.<版本>`、`lib<项目名>.so.<主版本>`、`lib<项目名>.so` | 版本化共享库：真实文件 + 两级软链（`version` 配置时） |
 | `<输出目录>/obj/*.o` | 目标文件 |
 | `<输出目录>/obj/*.o.d` | 每个编译单元的依赖文件，由 `-MMD -MF` 生成 |
+| `<输出目录>/obj/*.gcno`、`*.gcda` | 覆盖率插桩产物（`coverage: true`，随 clean 回收） |
 | `<输出目录>/obj/embed_<序号>.o` | `embed` 嵌入的二进制目标（参与链接，随 clean 回收） |
 | `<输出目录>/gresource.c` | `gresource` 生成的资源源码（作为编译单元参与构建） |
 | `<输出目录>/compile_commands.json` | 供 clangd 等工具解析的编译数据库，可用 `compile_commands: false` 关闭 |
+| `<输出目录>/report.html` | 可视化分析报告（`report: true` 构建后自动生成，或 `antel analyze`），自包含单文件 |
 | `<输出目录>/log/hashes` | hash 基线，记录上次成功构建的全部输入文件 |
 | `<输出目录>/log/hashes_diff` | 本次相对基线发生变化的文件及前后 hash |
 | `<输出目录>/log/stale_files` | 本次实际需要重新编译的源文件清单 |
@@ -314,7 +317,6 @@ cd <输出目录>/obj && gcov <对应目标>.gcda
 | `<输出目录>/log/<项目名>_link.sh` | 本次执行的链接脚本，链接就是执行这个脚本 |
 | `<输出目录>/log/<项目名>_link.rsp` | 链接命令行过长时使用的响应文件（`response_file` 控制） |
 | `<输出目录>/log/linkInfor` | 链接过程的完整输出 |
-| `<输出目录>/log/readelf_*`、`ldd_*`、`nm_*`、`symbol_*`、`archive_*`、`objdump_*` | 生成目标的符号表、动态依赖、归档内容等分析结果 |
-| `<输出目录>/log/<obj>/objdump-x` | `antel analyze` 对单个目标文件的分析结果 |
+| `<输出目录>/log/readelf_*`、`ldd_*`、`nm_*`、`symbol_*`、`archive_*`、`objdump_*` | 生成目标的符号表、动态依赖、归档内容等分析结果（也是报告「动态依赖/构建产物分析」的数据来源） |
 
 `antel clean` 会删除整个输出目录，包括生成目标与上表全部内容。

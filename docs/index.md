@@ -9,7 +9,7 @@
 <div class="hero-actions">
 <a href="quick-start/" class="md-button md-button--primary">快速开始</a>
 <a href="commands/" class="md-button">命令参考</a>
-<a href="https://github.com/luskyle/antelope/releases" class="md-button">下载 v1.0</a>
+<a href="https://github.com/luskyle/antelope/releases" class="md-button">下载 v1.2</a>
 </div>
 </div>
 
@@ -31,21 +31,37 @@
 
     [:octicons-arrow-right-24: 增量构建](incremental-build.md)
 
--   :material-alert-circle-outline:{ .lg .middle } **失败即中断**
+-   :material-alert-circle-outline:{ .lg .middle } **诊断聚合**
 
     ---
 
-    编译、链接、分析、运行任一环节返回非 0 都立即终止，以非 0 退出码结束，不会把失败当成功。
+    并行编译的输出按单元捕获：成功只汇总警告数，失败按文件分组整块回放、给出计数，不再被并发刷屏淹没。
 
     [:octicons-arrow-right-24: 命令与退出码](commands.md)
 
--   :material-clipboard-text-outline:{ .lg .middle } **产物可追溯**
+-   :material-chart-box-outline:{ .lg .middle } **可视化分析报告**
 
     ---
 
-    实际执行的编译命令与链接脚本落盘到 `log/`，附带符号表、重定位表、动态依赖等分析结果，便于事后核查与归档。
+    `report: true` 或 `antel analyze` 生成自包含的 `report.html`：产物、增量状态、编译参数、符号表、头文件依赖、大小分布、动态依赖与日志清单，浏览器直接打开。
 
-    [:octicons-arrow-right-24: 构建目录布局](configuration.md)
+    [:octicons-arrow-right-24: 命令参考](commands.md)
+
+-   :material-package-variant-closed:{ .lg .middle } **版本化共享库**
+
+    ---
+
+    `version` / `soname` / `rpath`：产出 `libX.so.<版本>` 与软链，消费端按 SONAME 链接、`$ORIGIN` rpath 加载。
+
+    [:octicons-arrow-right-24: 配置参考](configuration.md)
+
+-   :material-bug-outline:{ .lg .middle } **消毒器与覆盖率**
+
+    ---
+
+    `sanitize: ["address"]` / `coverage: true` 一键注入 ASan 与 gcov 插桩，运行后即可出覆盖率报告。
+
+    [:octicons-arrow-right-24: 配置参考](configuration.md)
 
 </div>
 

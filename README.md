@@ -3,7 +3,7 @@
 [![CI](https://github.com/luskyle/antelope/actions/workflows/ci.yml/badge.svg)](https://github.com/luskyle/antelope/actions/workflows/ci.yml)
 [![Pages](https://github.com/luskyle/antelope/actions/workflows/pages.yml/badge.svg)](https://luskyle.github.io/antelope/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.11%20%7C%203.13-blue.svg)](https://www.python.org/)
+[![Python](<https://img.shields.io/badge/python-3.9%20%7C%203.11%20%7C%203.13-blue.svg>)](https://www.python.org/)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
@@ -18,8 +18,12 @@
 - **配置即构建脚本**：编译参数、链接参数、目标类型、编译器类型都写在 `antel.json` 里，可以随源码一起提交与评审
 - **并行编译**：默认按 CPU 并行编译各编译单元（`jobs` 可调），并优先用 make 工具执行（`backend: auto`，没有 make 时自动回退内置执行器；仍由 antel 决定编什么）；同时输出 `compile_commands.json` 供 clangd 等工具使用
 - **基于依赖的增量构建**：每个编译单元都记录 `-MMD` 依赖，改头文件只重编受影响的源文件，目标文件或依赖文件缺失时自动补编
+- **诊断聚合**：并行编译输出按单元捕获——成功只汇总警告数，失败按文件分组整块回放并计数，不被并发刷屏淹没
+- **可视化分析报告**：`report: true` 或 `antel analyze` 生成自包含的 `report.html`，覆盖产物、增量状态、编译参数、符号表、头文件依赖、大小分布、动态依赖与日志清单，浏览器直接打开
 - **第三方库零手抄**：`pkg_config: ["libcurl"]` 自动注入 `pkg-config` 的 `--cflags/--libs`，不手写 `-I`/`-l`
 - **运行资源一键打包**：`data_files`（复制进输出目录）、`gresource`（GLib 资源编进二进制）、`embed`（任意二进制经 `ld -r -b binary` 嵌入）三种形态，支持目录分发与单文件分发；资源变化自动触发重编/重链
+- **版本化共享库**：`version` / `soname` / `rpath` 产出 `libX.so.<版本>` 与软链，消费端按 SONAME 链接、`$ORIGIN` rpath 加载
+- **消毒器与覆盖率**：`sanitize: ["address", "undefined"]` 与 `coverage: true` 一键注入，运行后 `gcov` 直接出覆盖率报告
 - **失败即中断**：编译、链接、分析、运行任一环节返回非 0 都立即终止，以非 0 退出码结束，不会把失败当成功
 - **产物可追溯**：实际执行的编译命令与链接脚本落盘到 `log/`，附带符号表、动态依赖等分析结果，便于事后核查
 
@@ -36,43 +40,45 @@ antel init       # 交互式生成 antel.json
 antel rebuild    # 全量构建
 antel build      # 只编发生变化的部分
 antel run        # 运行生成的可执行程序
+antel analyze    # 生成可视化分析报告 report.html
 ```
 
 ## 命令
 
-| 命令      | 作用                                           |
-| --------- | ---------------------------------------------- |
-| init      | 交互式生成 antel.json                          |
-| build     | 构建项目差异部分                               |
-| rebuild   | 重新构建项目。不管项目有否被构建过，都重新构建 |
-| clean     | 清除构建生成，包括所有中间文件与生成目标       |
-| link      | 只链接而不编译                                 |
-| analyze   | 自动分析指定的 c/c++ 源文件                    |
-| run       | 执行编译后的结果                               |
+| 命令          | 作用                                                 |
+| ------------- | ---------------------------------------------------- |
+| init          | 交互式生成 antel.json                                |
+| build         | 构建项目差异部分                                     |
+| sync-baseline | 只刷新 hash 基线，不编译（手工跑规则文件后对齐簿记） |
+| rebuild       | 重新构建项目。不管项目有否被构建过，都重新构建       |
+| clean         | 清除构建生成，包括所有中间文件与生成目标             |
+| link          | 只链接而不编译                                       |
+| analyze       | 生成可视化分析报告 report.html                       |
+| run           | 执行编译后的结果                                     |
 
 除 init 外的命令都支持 `--file` / `-f` 指定配置文件，默认为 antel。
 
 ## 编译器支持
 
-| compiler | 编译命令 | 静态库 | 共享库 / 可执行程序    |
-| -------- | -------- | ------ | ---------------------- |
-| gxx      | gcc/g++  | ✓      | g++ -shared / g++ -s   |
-| llvm     | clang    | ✓      | clang++（未验证）      |
-| msvc     | cl       | ✓      | 尚未实现，会直接报错   |
+| compiler | 编译命令 | 静态库 | 共享库 / 可执行程序  |
+| -------- | -------- | ------ | -------------------- |
+| gxx      | gcc/g++  | ✓     | g++ -shared / g++ -s |
+| llvm     | clang    | ✓     | clang++（未验证）    |
+| msvc     | cl       | ✓     | 尚未实现，会直接报错 |
 
 ## 文档
 
 完整文档在 [https://luskyle.github.io/antelope/](https://luskyle.github.io/antelope/)：
 
-| 页面                                                       | 内容                                            |
-| ---------------------------------------------------------- | ----------------------------------------------- |
-| [快速开始](https://luskyle.github.io/antelope/quick-start/) | 安装、init、最小配置、构建与运行                |
-| [配置参考](https://luskyle.github.io/antelope/configuration/) | antel.json 全部字段（含 pkg_config / data_files / gresource / embed）与构建目录布局 |
-| [示例与效果图](https://luskyle.github.io/antelope/examples/) | GTK 计算器、资源打包演示的完整配置与运行效果 |
-| [命令参考](https://luskyle.github.io/antelope/commands/)    | 各命令的参数、行为与退出码                      |
-| [增量构建](https://luskyle.github.io/antelope/incremental-build/) | 什么时候重编，hash 基线与依赖文件如何工作  |
-| [编译器支持](https://luskyle.github.io/antelope/compilers/) | gxx / llvm / msvc 与目标类型的支持细节          |
-| [开发与发布](https://luskyle.github.io/antelope/development/) | 测试、打包、发版流程与工作流                  |
+| 页面                                                             | 内容                                                                                |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [快速开始](https://luskyle.github.io/antelope/quick-start/)       | 安装、init、最小配置、构建与运行                                                    |
+| [配置参考](https://luskyle.github.io/antelope/configuration/)     | antel.json 全部字段（含 pkg_config / data_files / gresource / embed）与构建目录布局 |
+| [示例与效果图](https://luskyle.github.io/antelope/examples/)      | GTK 计算器、资源打包演示的完整配置与运行效果                                        |
+| [命令参考](https://luskyle.github.io/antelope/commands/)          | 各命令的参数、行为与退出码                                                          |
+| [增量构建](https://luskyle.github.io/antelope/incremental-build/) | 什么时候重编，hash 基线与依赖文件如何工作                                           |
+| [编译器支持](https://luskyle.github.io/antelope/compilers/)       | gxx / llvm / msvc 与目标类型的支持细节                                              |
+| [开发与发布](https://luskyle.github.io/antelope/development/)     | 测试、打包、发版流程与工作流                                                        |
 
 自带示例（`test/` 下，均可直接构建运行）：`helloworld`（单文件）、`cdemo`（多文件）、`gtkcalc`（libadwaita 计算器）、`resdemo`（资源打包 GUI 演示）、`antelstats`（版本化动态库 + 消毒器/覆盖率）。
 
