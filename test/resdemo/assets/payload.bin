@@ -1,0 +1,2 @@
+PAYLOAD-01: this binary payload is embedded via ld -r -b binary.
+It can be any file: firmware images, fonts, keymaps, whatever.

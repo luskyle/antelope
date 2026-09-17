@@ -1,0 +1,5 @@
+gresource 说明
+==============
+这份 notes 由 glib-compile-resources 编译进可执行文件（单文件分发）。
+ELF constructor 自动注册，程序用 GResource API 按前缀路径读取。
+改这个文件后 antel build 会重编 gresource 单元并重链接。

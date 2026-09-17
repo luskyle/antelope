@@ -1,0 +1,5 @@
+Antelope Resource Demo
+======================
+这份 banner 由 data_files 复制进输出目录（目录分发）。
+程序按 /proc/self/exe 定位资源目录，与当前工作目录无关。
+改这个文件后 antel build 会重新同步。

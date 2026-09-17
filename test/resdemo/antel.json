@@ -1,0 +1,26 @@
+{
+    "projectName": "resdemo",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "source": [
+        "src/main.c"
+    ],
+    "exclude_source": [],
+    "include_directories": [],
+    "compile_args": [
+        "-O2",
+        "-Wall"
+    ],
+    "link_args": [],
+    "analyze_files": [],
+    "pkg_config": [
+        "gio-2.0"
+    ],
+    "data_files": [
+        "assets"
+    ],
+    "gresource": "gresource.gresource.xml",
+    "embed": [
+        "assets/payload.bin"
+    ]
+}
