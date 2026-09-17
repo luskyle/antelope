@@ -19,6 +19,7 @@ import time
 
 from antelope.enums import *
 from antelope.os_ops.command import *
+from antelope.resources import symbolName as symbol_name
 
 
 class Analyzor():
@@ -49,10 +50,48 @@ class Analyzor():
             'objects': self.object_sizes(),
             'dependencies': self.dependency_map(antel),
             'dynamic': self.dynamic_deps(target),
+            'resources': self.resource_info(antel),
             'compile_commands': self.compile_commands(),
             'logs': self.log_files(),
             'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
         }
+
+    def resource_info(self, antel) -> dict:
+        """资源情况：data_files 复制项、gresource 清单、embed 嵌入项（配置了才有）"""
+        info = {'data_files': [], 'gresource': None, 'embeds': []}
+
+        for entry in getattr(antel, 'data_files', []):
+            source = entry['from']
+            target = f'{self.output_dir}/{entry["to"]}'
+            info['data_files'].append({
+                'from': source,
+                'to': entry['to'],
+                'exists': os.path.exists(target),
+                'is_dir': os.path.isdir(target),
+            })
+
+        if getattr(antel, 'gresource', '') != '':
+            generated = f'{self.output_dir}/gresource.c'
+            inputs = antel.resource.gresource_inputs() if hasattr(antel.resource, 'gresource_inputs') else []
+            # gresource_inputs 含 xml 自身，报告里单独展示 xml，这里只列引用文件
+            inputs = [os.path.basename(p) for p in inputs if p != antel.gresource]
+            info['gresource'] = {
+                'xml': antel.gresource,
+                'inputs': inputs,
+                'generated_size': os.path.getsize(generated) if os.path.exists(generated) else 0,
+                'generated_exists': os.path.exists(generated),
+            }
+
+        for index, embed in enumerate(getattr(antel, 'embeds', [])):
+            obj = f'{self.output_dir}/obj/embed_{index}.o'
+            info['embeds'].append({
+                'file': embed,
+                'size': os.path.getsize(embed) if os.path.exists(embed) else 0,
+                'exists': os.path.exists(embed),
+                'obj_exists': os.path.exists(obj),
+                'symbol': symbol_name(embed),
+            })
+        return info
 
     def target_path(self, antel) -> str:
         """当前配置的生成目标路径（exe / 静态库 / 共享库）"""
@@ -291,6 +330,46 @@ def object_bar(objects:list) -> str:
     return rows
 
 
+def resource_section(resources:dict) -> str:
+    """资源情况区块：data_files / gresource / embed，配置了哪个展示哪个"""
+    if not (resources['data_files'] or resources['gresource'] or resources['embeds']):
+        return ''
+
+    rows = ''
+
+    # data_files：目录分发
+    for item in resources['data_files']:
+        state = ('<span class="ok">✓ 已复制</span>' if item['exists']
+                 else '<span class="warn">✗ 未复制（构建后才有）</span>')
+        kind = '目录' if item['is_dir'] else '文件'
+        rows += (f'<tr><td>data_files</td>'
+                 f'<td>{kind}：<code>{esc(item["from"])}</code> → <code>{esc(item["to"])}</code>{state}</td></tr>')
+
+    # gresource：单文件分发
+    if resources['gresource']:
+        g = resources['gresource']
+        inputs = ' '.join(f'<code>{esc(f)}</code>' for f in g['inputs'])
+        state = ('<span class="ok">✓ 已编入</span>' if g['generated_exists']
+                 else '<span class="warn">✗ 未生成</span>')
+        size_desc = f'，生成 <code>gresource.c</code> 共 {g["generated_size"]} 字节' if g['generated_exists'] else ''
+        rows += (f'<tr><td>gresource</td>'
+                 f'<td>XML：<code>{esc(g["xml"])}</code> 引用文件：{inputs}{size_desc}{state}</td></tr>')
+
+    # embed：单文件分发
+    for item in resources['embeds']:
+        state = ('<span class="ok">✓ 已嵌入</span>' if item['obj_exists']
+                 else ('<span class="warn">✗ 未嵌入</span>' if item['exists'] else '<span class="warn">✗ 源缺失</span>'))
+        rows += (f'<tr><td>embed</td>'
+                 f'<td><code>{esc(item["file"])}</code>（{item["size"]} 字节）'
+                 f'符号 <code>{esc(item["symbol"])}</code>{state}</td></tr>')
+
+    return (f'  <h2>资源情况</h2>\n'
+            f'  <table>\n'
+            f'    <tr><th>形态</th><th>详情</th></tr>\n'
+            f'    {rows}\n'
+            f'  </table>')
+
+
 def render_report(report:dict) -> str:
     p = report['project']
     target = report['target']
@@ -367,6 +446,9 @@ def render_report(report:dict) -> str:
         log_rows += (f'<tr><td class="mono small">{esc(entry["name"])}</td>'
                      f'<td>{entry["size"]}</td></tr>')
 
+    # 资源情况（配置了才有区块）
+    resource_html = resource_section(report['resources'])
+
     target_status = (f'<div class="ok">✓ 已生成 &nbsp;{esc(target["path"])}'
                      f'&nbsp;（{size_kb}）</div>') if target['exists'] else \
                     f'<div class="warn">✗ 尚未构建，目标不存在</div>'
@@ -439,6 +521,8 @@ summary {{ cursor: pointer; color: #7dd3fc; }}
     <tr><th>类别</th><th>使用情况</th></tr>
     {flag_table(flags)}
   </table>
+
+  {resource_html}
 
   <h2>目标符号表（{total_symbols} 个符号）</h2>
   <table>
