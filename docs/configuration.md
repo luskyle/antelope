@@ -17,6 +17,9 @@
 | compile_commands    | 布尔       | 否   | 是否输出 `compile_commands.json`，默认 `true`                        |
 | response_file       | 字符串     | 否   | 链接命令行过长时是否改用响应文件，`auto`（默认）／`always`／`never`  |
 | pkg_config          | 字符串数组 | 否   | 外部库清单，逐包注入 `pkg-config` 的 `--cflags/--libs` 输出，如 ["libcurl"] |
+| data_files          | 数组       | 否   | 运行资源复制进输出目录，字符串（`from==to`）或 `{"from": 源, "to": 目标}` |
+| gresource           | 字符串     | 否   | GLib 资源描述文件（`.gresource.xml`），资源编进可执行文件（单文件分发） |
+| embed               | 字符串数组 | 否   | 任意二进制嵌入可执行文件（单文件分发），程序用 `_binary_` 符号访问 |
 | exclude_source      | 字符串数组 | 否   | 保留字段，当前不参与构建                                             |
 
 !!! warning "取值非法的字段会直接报错退出"
@@ -114,6 +117,69 @@ CompileFlags:
 
 包不存在、或机器上没有 pkg-config 命令时直接报错退出，不会静默丢参数。
 
+### data_files
+
+运行资源（图片、配置文件、脚本等）在构建时复制进输出目录，程序按相对路径读取。适合可替换、体积大的资源。写法二选一：
+
+```json
+{
+  "data_files": ["assets"]
+}
+```
+
+```json
+{
+  "data_files": [
+    {"from": "assets", "to": "assets"},
+    {"from": "config/settings.ini", "to": "settings.ini"}
+  ]
+}
+```
+
+- 字符串形态：`from` 与 `to` 同名，源目录整体复制（保持内部结构），源文件按名复制
+- 对象形态：`from` 是项目目录下的源，`to` 是输出目录下的目标；目标是目录或文件由源决定
+- 源文件进入 hash 基线：修改后 `antel build` 会重新同步
+- `antel clean` 连同输出目录一并回收
+
+### gresource
+
+GLib 资源，把图片、CSS、UI 描述等编译成 C 源码再编进可执行文件——**单文件分发**，拷走一个二进制就带全资源。需要 `glib-compile-resources`（GTK 开发包通常自带）：
+
+```json
+{
+  "gresource": "gresource.gresource.xml"
+}
+```
+
+`gresource.gresource.xml` 里 `<gresource prefix="/io/github/luskyle/app">` 指定访问前缀，`<file>` 列资源路径。gio 绑定由 `pkg_config` 提供，如 `"pkg_config": ["libadwaita-1"]`。程序里直接用 GResource API 读取：
+
+```c
+GBytes *bytes = g_resources_lookup_data("/io/github/luskyle/app/img/logo.png",
+                                         G_RESOURCE_LOOKUP_FLAGS_NONE, NULL);
+```
+
+生成的 `gresource.c` 作为普通编译单元参与构建，它的 hash 进入基线：改资源文件 → 自动重新生成、重编、重链。生成的代码自带 ELF constructor，资源无需手动注册。工作目录在构建时是项目根，xml 内相对路径以它为准；`antel clean` 回收生成物。
+
+### embed
+
+任意二进制（图片、模型、按键映射等）用 `ld -r -b binary` 嵌入可执行文件，**单文件分发**。适合非 GLib 的通用 C/C++ 工程：
+
+```json
+{
+  "embed": ["assets/logo.png", "assets/firmware.bin"]
+}
+```
+
+C 代码里用自动生成的符号访问，符号名是路径（非字母数字字符全换成下划线）加上 `_binary_` 前缀与 `_start`/`_end`/`_size` 后缀：
+
+```c
+/* assets/logo.png → _binary_assets_logo_png_start/_end */
+extern const unsigned char _binary_assets_logo_png_start[];
+extern const unsigned char _binary_assets_logo_png_end[];
+```
+
+嵌入文件进入 hash 基线：修改后 `antel build` 会重新生成 `.o` 并重链接（即使没有源文件变化）。产物在 `<输出目录>/obj/embed_<序号>.o`，随 `antel clean` 回收。
+
 ## 构建目录
 
 输出目录是 `./<projectName>_<配置文件名>/`：配置文件名 `antel.json`、项目名 `helloworld`，输出目录就是 `helloworld_antel/`。
@@ -124,6 +190,8 @@ CompileFlags:
 | `<输出目录>/lib<项目名>.a`、`lib<项目名>.so` | 静态库、共享库目标 |
 | `<输出目录>/obj/*.o` | 目标文件 |
 | `<输出目录>/obj/*.o.d` | 每个编译单元的依赖文件，由 `-MMD -MF` 生成 |
+| `<输出目录>/obj/embed_<序号>.o` | `embed` 嵌入的二进制目标（参与链接，随 clean 回收） |
+| `<输出目录>/gresource.c` | `gresource` 生成的资源源码（作为编译单元参与构建） |
 | `<输出目录>/compile_commands.json` | 供 clangd 等工具解析的编译数据库，可用 `compile_commands: false` 关闭 |
 | `<输出目录>/log/hashes` | hash 基线，记录上次成功构建的全部输入文件 |
 | `<输出目录>/log/hashes_diff` | 本次相对基线发生变化的文件及前后 hash |

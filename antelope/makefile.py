@@ -51,6 +51,8 @@ def renderRuleText(plan:BuildPlan):
 
     if plan.link is not None:
         objs = ' '.join(escapePath(unit.obj) for unit in plan.units)
+        if plan.extra_objs:
+            objs += ' ' + ' '.join(escapePath(obj) for obj in plan.extra_objs)
         lines += [f'{escapePath(plan.link.output)}: {objs}',
                   f'{RECIPE_INDENT}{escapeRecipe(plan.link.argv())}', '']
 

@@ -16,6 +16,7 @@ from antelope.args_parser.external_json import *
 from antelope.compiler.compiler import *
 from antelope.linker.linker import *
 from antelope.makefile import *
+from antelope.resources import *
 from antelope.analyze.analyzor import *
 from antelope.cli.init_json import *
 from antelope.cli.console import *
@@ -41,10 +42,14 @@ class Antelope:
         self.compile_commands = True
         self.response_file = 'auto'
         self.pkg_config = []
+        self.data_files = []
+        self.gresource = ''
+        self.embeds = []
 
         self.dir = Directory()
         self.console = Console()
         self.output_dir = '.'
+        self.resource = ResourceManager(output_dir=self.output_dir)
 
     def flushSetting(self):
         self.external = External(self.project_name, self.source,
@@ -53,6 +58,9 @@ class Antelope:
                             self.link_args_list, self.output_dir)
 
         pkg_cflags, pkg_libs = resolvePkgConfig(self.pkg_config)
+
+        self.resource = ResourceManager(self.data_files, self.gresource, self.embeds,
+                                        output_dir=self.output_dir)
 
         compilerObj = Compiler(self.project_name, self.source,
                             self.include_directories, self.target_type,
@@ -95,12 +103,12 @@ class Antelope:
         return compile_files
 
     def get_project_source(self):
-        """本次构建涉及的全部输入文件"""
-        return self.source + self.get_include_files()
+        """本次构建涉及的全部输入文件：源文件 + include 目录文件 + 生成的 gresource.c（若存在）"""
+        return self.source + self.get_include_files() + self.resource.generated_sources()
 
     def get_track_files(self):
-        """参与变更检测的文件：配置中的源文件、include 目录下的文件、以及上次构建记录的依赖"""
-        return self.source + self.compiler.collect_dependencies()
+        """参与变更检测的文件：配置中的源文件、include 目录下的文件、上次构建记录的依赖、以及资源输入"""
+        return self.source + self.compiler.collect_dependencies() + self.resource.track_files()
 
     def save_baseline(self):
         """构建成功后刷新 hash 基线，使下次构建以本次成功构建为比较基准"""
@@ -112,11 +120,18 @@ class Antelope:
         self.dir.MakeDirectory(f"{self.output_dir}/obj/")
         self.dir.MakeDirectory(f"{self.output_dir}/log/")
 
+        # 先部署资源：复制 data_files、按需（重复生成内容不变）生成 gresource.c 与 embed .o。
+        # 资源输入会进入 hash 基线，变化即触发对应单元重编或重链接
+        self.resource.deploy()
+
         calc = CalcHash(self.get_track_files(), self.output_dir)
         changed_files = calc.GetChangedFiles()
 
         stale_sources = self.compiler.get_stale_sources(self.get_project_source(), changed_files)
-        if stale_sources.__len__() == 0:
+        resource_set = set(self.resource.track_files())
+        resource_changed = bool(set(changed_files) & resource_set)
+
+        if stale_sources.__len__() == 0 and not resource_changed:
             self.console.WriteNotice('项目没有改动，无需重新构建. 如需强制全量构建，请使用 antel rebuild 构建.')
             return
 
@@ -132,6 +147,8 @@ class Antelope:
 
         self.dir.ClearMakeDirectory(f"{self.output_dir}/obj/")
         self.dir.ClearMakeDirectory(f"{self.output_dir}/log/")
+
+        self.resource.deploy()
 
         self.compileSources([], rebuild=True)
         self.linker.link()
@@ -192,9 +209,11 @@ class Antelope:
         self.compiler.write_compile_commands(units)
 
         self.linker.external.parse_link_args()
-        link_job = self.linker.build_link_job([unit.obj for unit in units],
+        extra_objs = self.resource.generated_objects()
+        link_job = self.linker.build_link_job([unit.obj for unit in units] + extra_objs,
                                             self.linker.external.parse_compile_args())
-        return BuildPlan(units=units, link=link_job, jobs=self.jobs, backend=self.backend)
+        return BuildPlan(units=units, link=link_job, jobs=self.jobs, backend=self.backend,
+                         extra_objs=extra_objs)
 
     def link(self):
         self.linker.link()
@@ -334,6 +353,9 @@ def parseJsonConfig(file:str='antel'):
     antel.compile_commands = readBool(config, 'compile_commands', True)
     antel.response_file = readResponseFile(config)
     antel.pkg_config = readList(config, 'pkg_config')
+    antel.data_files = readDataFiles(config)
+    antel.gresource = readGresource(config)
+    antel.embeds = readEmbeds(config)
     print(f'并行度：{antel.jobs}  执行器：{describeBackend(antel.backend)}  compile_commands.json：'
         + ('开启' if antel.compile_commands else '关闭'))
 

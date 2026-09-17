@@ -55,11 +55,13 @@ class LinkJob():
 class BuildPlan():
     """一次构建的完整计划"""
 
-    def __init__(self, units:list=[], link:LinkJob=None, jobs:int=1, backend:str='antel'):
+    def __init__(self, units:list=[], link:LinkJob=None, jobs:int=1, backend:str='antel',
+                 extra_objs:list=[]):
         self.units = units
         self.link = link
         self.jobs = jobs
         self.backend = backend
+        self.extra_objs = list(extra_objs)
 
     def renderUnits(self):
         return [unit.render() + '\n' for unit in self.units]

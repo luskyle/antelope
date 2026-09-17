@@ -360,6 +360,7 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 | pkg-config      | `pkg_config: [...]` → 注入 `pkg-config` 输出                                                          | 编译/链接参数包含第三方库                               |
 | 覆盖率 / 消毒器 | `sanitize`、`coverage` → 参数注入；`clean` 回收 `.gcda`/`.gcno`                                 | 运行后`gcov` 可产出报告                               |
 | 诊断聚合        | 编译输出按 TU 归并、警告计数、失败按文件分组                                                               | 多错误场景输出可读，失败仍以非 0 退出                   |
+| 运行资源打包    | `data_files`（目录复制）/ `gresource`（GLib 嵌入）/ `embed`（`ld -r -b binary`）                     | 三种形态产物可用；资源变化驱动重编/重链               |
 | 工具包装        | `wrapper: [ccache]`                                                                                      | 包装器生效且不破坏依赖判定                              |
 
 #### P2-2 实施记录（已完成，2026-09-17）
@@ -376,6 +377,29 @@ GNU make 是一个重写系统：变量可递归展开、支持条件、`include
 - 用真实包 fontconfig 手工验证：`-I/usr/include/uuid -I/usr/include/freetype2 -I/usr/include/libpng16` 进入编译命令、`-lfontconfig` 进入链接脚本，构建退出码 0
 
 实现过程中发现并修复的坑：pkg-config 的输出一开始用 `Command.run_argv` 的默认（透传）模式拿不回来——该模式输出直接进终端、返回空串，导致 `-I` 静默丢失。给 `run_argv` 增加 `capture` 参数后解决。
+
+#### P2-5 运行资源打包实施记录（已完成，2026-09-17）
+
+交付内容：
+
+- 新增 `antelope/resources.py`：`ResourceManager` 负责解析校验、幂等部署、参与增量判定
+  - `data_files`：目录/文件复制进输出目录（字符串形态 `from==to`，对象形态 `{from, to}`）
+  - `gresource`：调 `glib-compile-resources --generate-source` 生成 `<输出目录>/gresource.c`，作为普通编译单元参与构建
+  - `embed`：`ld -r -b binary` 把任意文件嵌成 `<输出目录>/obj/embed_<序号>.o`，链接时被自动收集（内置后端的 `collect_objects` 与 make 后端的 `extra_objs` 都覆盖）
+- 增量语义：资源输入（复制源、gresource 的 xml 与引用文件、embed 源、已生成的 gresouce.c）全部进入 hash 基线。`embed` 源变了没有编译单元变 stale，此时由 `changed_files & resource_set` 驱动重链接——这是比"只盯编译单元"多一层的原因
+- `BuildPlan` 增加 `extra_objs`：make 后端链接目标显式带上 embed 的 `.o`
+
+实测：
+
+- 新增 5 条测试（data_files 复制与重同步、gresource 端到端与改资源重编、embed 端到端与改资源重链、无改动不重链、clean 回收），总数 25 → **30** 条全绿
+- gresource 端到端用真实 `gio-2.0`（pkg_config 注入），程序 `g_resources_lookup_data` 读到嵌入内容；改资源文本后 `build` 自动重编 gresource 单元、重链接，运行输出变化
+- embed 端到端用 `ld -r -b binary` 嵌入文本，程序经 `_binary_assets_hello_txt_start/_end` 符号读取；只改嵌入文件不碰源码，`build` 依旧重链接
+
+实现过程中发现并验证的事实：
+
+- `glib-compile-resources`（本机 2.84.4）输出**逐字节确定**（同输入两次生成 `cmp` 一致），因此可以放心走 antel 的 hash 增量判定；生成的代码自带 ELF constructor，资源自动注册，程序无需手动调用 `gres_get_resource()`
+- `ld -r -b binary` 与 `objcopy -I binary` 都可用，符号规则一致：`assets/msg.txt` → `_binary_assets_msg_txt_start/_end/_size`（路径中非字母数字字符全换下划线）。选 `ld` 是因为不硬编码目标格式，跨架构更稳
+- 符号名与写入文档的推导规则一致，测试按规则书写并验证通过
 
 ### Phase 3：生态互操作（2-3 天，可选）
 
