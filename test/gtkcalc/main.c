@@ -19,9 +19,17 @@ static guint g_autoclose = 0;
 static void set_display(Calc *calc)
 {
     char text[96];
+    const char *op;
 
     if (calc->pending_op != 0) {
-        snprintf(text, sizeof(text), "%g %c %s", calc->accumulator, calc->pending_op, calc->entry);
+        switch (calc->pending_op) {
+        case '+': op = "+"; break;
+        case '-': op = "-"; break;
+        case '*': op = "×"; break;
+        case '/': op = "÷"; break;
+        default: op = ""; break;
+        }
+        snprintf(text, sizeof(text), "%g %s %s", calc->accumulator, op, calc->entry);
     } else {
         snprintf(text, sizeof(text), "%s", calc->entry);
     }
@@ -119,7 +127,11 @@ static void on_button(GtkButton *button, gpointer user_data)
         on_equals(calc);
     } else if (strcmp(label, ".") == 0) {
         on_dot(calc);
-    } else if (strchr("+-*/", label[0]) != NULL && label[1] == '\0') {
+    } else if (strcmp(label, "÷") == 0) {
+        on_operator(calc, '/');
+    } else if (strcmp(label, "×") == 0) {
+        on_operator(calc, '*');
+    } else if (strchr("+-", label[0]) != NULL && label[1] == '\0') {
         on_operator(calc, label[0]);
     } else {
         on_digit(calc, label[0]);
@@ -151,9 +163,14 @@ static void on_activate(GApplication *app, gpointer user_data)
     Calc *calc = g_new0(Calc, 1);
 
     GtkWidget *window = adw_application_window_new(GTK_APPLICATION(app));
-    gtk_window_set_title(GTK_WINDOW(window), "Antelope 计算器");
     gtk_window_set_default_size(GTK_WINDOW(window), 320, 420);
-    /* AdwApplicationWindow 自带 AdwHeaderBar 标题栏，无需手动设置 */
+
+    /* libadwaita 1.1：AdwWindow 无标题栏区域，窗口按钮（关闭/最大化等）
+     * 由内容顶部的 AdwHeaderBar 提供，不能调 gtk_window_set_titlebar */
+    GtkWidget *root_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    AdwHeaderBar *header = ADW_HEADER_BAR(adw_header_bar_new());
+    adw_header_bar_set_title_widget(header, gtk_label_new("Antelope 计算器"));
+    gtk_box_append(GTK_BOX(root_box), GTK_WIDGET(header));
 
     /* 主体：显示 + 按键区 */
     GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
@@ -172,7 +189,7 @@ static void on_activate(GApplication *app, gpointer user_data)
 
     calc_clear(calc);
 
-    /* 按键区 5 行 x 4 列 */
+    /* 按键区 5 行 x 4 列，iOS 风格：右侧列 ÷ × - +，底部 0 . = */
     GtkWidget *grid = gtk_grid_new();
     gtk_widget_set_vexpand(grid, TRUE);
     gtk_grid_set_row_homogeneous(GTK_GRID(grid), TRUE);
@@ -180,32 +197,31 @@ static void on_activate(GApplication *app, gpointer user_data)
     gtk_grid_set_row_spacing(GTK_GRID(grid), 4);
     gtk_grid_set_column_spacing(GTK_GRID(grid), 4);
 
-    make_button(calc, GTK_GRID(grid), "C", 0, 0, 1);
-    make_button(calc, GTK_GRID(grid), "/", 1, 0, 1);
-    make_button(calc, GTK_GRID(grid), "*", 2, 0, 1);
-    make_button(calc, GTK_GRID(grid), "-", 3, 0, 1);
+    make_button(calc, GTK_GRID(grid), "C", 0, 0, 3);
+    make_button(calc, GTK_GRID(grid), "÷", 3, 0, 1);
 
     make_button(calc, GTK_GRID(grid), "7", 0, 1, 1);
     make_button(calc, GTK_GRID(grid), "8", 1, 1, 1);
     make_button(calc, GTK_GRID(grid), "9", 2, 1, 1);
-    make_button(calc, GTK_GRID(grid), "+", 3, 1, 1);
+    make_button(calc, GTK_GRID(grid), "×", 3, 1, 1);
 
     make_button(calc, GTK_GRID(grid), "4", 0, 2, 1);
     make_button(calc, GTK_GRID(grid), "5", 1, 2, 1);
     make_button(calc, GTK_GRID(grid), "6", 2, 2, 1);
-    make_button(calc, GTK_GRID(grid), "=", 3, 2, 1);
+    make_button(calc, GTK_GRID(grid), "-", 3, 2, 1);
 
     make_button(calc, GTK_GRID(grid), "1", 0, 3, 1);
     make_button(calc, GTK_GRID(grid), "2", 1, 3, 1);
     make_button(calc, GTK_GRID(grid), "3", 2, 3, 1);
-    make_button(calc, GTK_GRID(grid), "=", 3, 3, 1);
+    make_button(calc, GTK_GRID(grid), "+", 3, 3, 1);
 
     make_button(calc, GTK_GRID(grid), "0", 0, 4, 2);
     make_button(calc, GTK_GRID(grid), ".", 2, 4, 1);
     make_button(calc, GTK_GRID(grid), "=", 3, 4, 1);
 
     gtk_box_append(GTK_BOX(box), grid);
-    adw_application_window_set_content(ADW_APPLICATION_WINDOW(window), box);
+    gtk_box_append(GTK_BOX(root_box), box);
+    adw_application_window_set_content(ADW_APPLICATION_WINDOW(window), root_box);
 
     if (g_autoclose > 0) {
         g_timeout_add_seconds(g_autoclose, (GSourceFunc)gtk_window_destroy, window);
