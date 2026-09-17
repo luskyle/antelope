@@ -32,7 +32,8 @@ class AntelJsonCpp():
             # "-licui18n",
             # "-ldl"
         ]})
-        json_dict.update({"analyze_files":[]})
+        json_dict.update({"compile_commands":True})
+        json_dict.update({"report":False})
 
         if os.path.exists(f'./{self.fileName}'):
             result = yes_no_dialog(

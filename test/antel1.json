@@ -17,5 +17,5 @@
         "-fPIC"
     ],
     "link_args": [],
-    "analyze_files": []
+    "report": false
 }

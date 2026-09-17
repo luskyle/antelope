@@ -16,7 +16,6 @@ def write_config(project_dir, **overrides):
         'include_directories': ['inc'],
         'compile_args': ['-w'],
         'link_args': [],
-        'analyze_files': [],
     }
     config.update(overrides)
 

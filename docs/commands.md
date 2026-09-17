@@ -57,7 +57,7 @@ antel rebuild    # 清空 obj/ 与 log/，全部重编
 antel analyze
 ```
 
-无需为 `analyze_files` 手工填表——报告自动覆盖全部源文件。该字段保留但已非必需。
+报告自动覆盖配置里的全部源文件，无需配置字段（`report: true` 时构建后自动生成）。
 
 ## run
 

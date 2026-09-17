@@ -38,7 +38,7 @@ antel init
   "include_directories": ["include"],
   "compile_args": ["-std=c++17", "-w", "-Os", "-fPIC"],
   "link_args": ["-lm"],
-  "analyze_files": ["helloworld.c"]
+  "report": false
 }
 ```
 

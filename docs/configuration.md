@@ -11,7 +11,8 @@
 | compiler            | 字符串     | 是   | `msvc`、`gxx`、`llvm`，不区分大小写                                  |
 | compile_args        | 字符串数组 | 否   | 传给编译器的编译参数                                                 |
 | link_args           | 字符串数组 | 否   | 传给链接器的链接参数，如 `["-ldl"]`，只能是字符串数组                |
-| analyze_files       | 字符串数组 | 否   | 已非必需：`antel analyze` 的报告自动覆盖全部源文件，此字段保留兼容       |
+| analyze_files       | 字符串数组 | 否   | **已废弃**：报告自动覆盖全部源文件，此字段不再读取              |
+| report              | 布尔       | 否   | 构建成功后自动生成可视化报告 `report.html`（默认 `false`），不参与编译 |
 | jobs                | 整数       | 否   | 并行编译的单元数，默认 `min(8, CPU 核数)`；填 `1` 即串行             |
 | backend             | 字符串     | 否   | 执行编译的工具，`auto`（默认：有 make 就用 make，没有则回退内置执行器）／`make`／`antel` |
 | compile_commands    | 布尔       | 否   | 是否输出 `compile_commands.json`，默认 `true`                        |
@@ -69,7 +70,21 @@
 
 ### analyze_files
 
-保留兼容字段，已非必需：`antel analyze` 生成的报告自动覆盖配置里的全部源文件，无需在此列出。留空即可（模板默认就是空数组）。
+**已废弃**：早期版本用它指定「antel analyze 要分析哪些源文件」。现在的分析报告自动覆盖配置里的全部源文件，此字段不再读取，可以放心删掉。模板已换成 `report`。
+
+### report
+
+构建成功后自动生成可视化分析报告（`<输出目录>/report.html`）：
+
+```json
+{
+    "report": true
+}
+```
+
+- **不参与编译**：不加任何编译参数、产物字节与 `report: false` 完全一致、也不进 hash 基线——只是构建成功后多跑一次分析
+- 需要随时手动生成时用 `antel analyze`，效果与 `report: true` 的构建一样
+- 报告内容见[命令参考](commands.md)的 analyze 一节
 
 ### jobs
 
@@ -266,10 +281,10 @@ cd <输出目录>/obj && gcov <对应目标>.gcda
     "include_directories": ["include"],
     "compile_args": ["-O2", "-Wall"],
     "link_args": ["-lm"],
-    "analyze_files": ["src/main.c"],
     "jobs": 8,
     "backend": "auto",
     "compile_commands": true,
+    "report": false,
     "pkg_config": ["libadwaita-1"],
     "data_files": ["assets"],
     "gresource": "gresource.gresource.xml",

@@ -36,11 +36,11 @@ class Antelope:
         self.compiler_type = CompilerType.gxx
         self.compile_args_list = []
         self.link_args_list = []
-        self.analyze_files = []
         self.jobs = DEFAULT_JOBS
         self.backend = 'auto'
         self.compile_commands = True
         self.response_file = 'auto'
+        self.report = False
         self.pkg_config = []
         self.sanitize = []
         self.coverage = False
@@ -148,6 +148,7 @@ class Antelope:
         self.compileSources(stale_sources)
         self.linker.link()
         self.save_baseline()
+        self.maybe_report()
 
     def rebuild(self):
         self.buildType = BuildType.Rebuild
@@ -161,6 +162,13 @@ class Antelope:
         self.compileSources([], rebuild=True)
         self.linker.link()
         self.save_baseline()
+        self.maybe_report()
+
+    def maybe_report(self):
+        """report: true 时在构建成功后自动生成可视化报告。它不参与编译：
+        不加任何编译参数、不改变产物、不进 hash 基线，只是多跑一次分析"""
+        if self.report:
+            self.analyzor.analyze_obj(self, self.source)
 
     def compileSources(self, stale_sources:list, rebuild:bool=False):
         """
@@ -380,11 +388,11 @@ def parseJsonConfig(file:str='antel'):
 
     antel.compile_args_list = readList(config, 'compile_args')
     antel.link_args_list = readList(config, 'link_args')
-    antel.analyze_files = readList(config, 'analyze_files')
 
     antel.jobs = readJobs(config)
     antel.backend = readBackend(config)
     antel.compile_commands = readBool(config, 'compile_commands', True)
+    antel.report = readBool(config, 'report', False)
     antel.response_file = readResponseFile(config)
     antel.pkg_config = readList(config, 'pkg_config')
     antel.sanitize = readList(config, 'sanitize')
@@ -456,7 +464,7 @@ def link(file):
 @handleBuildError
 def analyze(file):
     config = parseJsonConfig(file)
-    config.analyze(config.analyze_files)
+    config.analyze(config.source)
     print('analyze finished!')
 
 @main.command(help='清除构建生成，包括所有中间文件与生成目标')

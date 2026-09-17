@@ -25,7 +25,7 @@
         "-Wall"
     ],
     "link_args": [],
-    "analyze_files": [],
+    "report": false,
     "pkg_config": [
         "libadwaita-1"
     ]
@@ -85,7 +85,7 @@
         "-Wall"
     ],
     "link_args": [],
-    "analyze_files": [],
+    "report": false,
     "pkg_config": [
         "libadwaita-1"
     ],
@@ -178,6 +178,7 @@ test/antelstats/
     "source": ["src/stats.c", "src/csv.c", "src/version.c"],
     "include_directories": ["src"],
     "compile_args": ["-O2", "-Wall", "-fPIC"],
+    "report": false,
     "version": "1.0.0"
 }
 ```
@@ -194,6 +195,7 @@ test/antelstats/
     "source": ["src/main.c"],
     "compile_args": ["-O2", "-Wall", "-Isrc"],
     "link_args": ["-Lantelstats_antel", "-lantelstats"],
+    "report": false,
     "rpath": ["$ORIGIN/../antelstats_antel"]
 }
 ```

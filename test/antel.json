@@ -17,7 +17,5 @@
         "-fPIC"
     ],
     "link_args": [],
-    "analyze_files": [
-    	"helloworld.c"
-    ]
+    "report": false
 }

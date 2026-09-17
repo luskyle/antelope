@@ -16,7 +16,7 @@
         "-Lantelstats_antel",
         "-lantelstats"
     ],
-    "analyze_files": [],
+    "report": false,
     "rpath": [
         "$ORIGIN/../antelstats_antel"
     ]

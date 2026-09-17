@@ -104,7 +104,6 @@ def test_consumer_links_by_soname_and_runs_with_rpath(project):
         'include_directories': [],
         'compile_args': ['-w'],
         'link_args': ['-Ldemo_antel', '-ldemo'],
-        'analyze_files': [],
         'rpath': ['$ORIGIN/../demo_antel'],
     }
     import json
