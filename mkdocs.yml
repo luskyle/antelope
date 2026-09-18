@@ -40,6 +40,7 @@ nav:
   - 快速开始: quick-start.md
   - 配置参考: configuration.md
   - 示例与效果图: examples.md
+  - 报告示例: report.md
   - 命令参考: commands.md
   - 增量构建: incremental-build.md
   - 编译器支持: compilers.md
@@ -49,6 +50,7 @@ nav:
     - Quick Start: en/quick-start.md
     - Configuration: en/configuration.md
     - Examples: en/examples.md
+    - Report: en/report.md
     - Commands: en/commands.md
     - Incremental Build: en/incremental-build.md
     - Compilers: en/compilers.md

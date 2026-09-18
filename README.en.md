@@ -83,6 +83,7 @@ Full documentation lives at [https://luskyle.github.io/antelope/](https://luskyl
 | [Quick Start](https://luskyle.github.io/antelope/en/quick-start/)      | install, init, minimal config, build & run                                  |
 | [Configuration](https://luskyle.github.io/antelope/en/configuration/)  | every antel.json field (incl. pkg_config / data_files / gresource / embed)  |
 | [Examples](https://luskyle.github.io/antelope/en/examples/)            | full configs and running results of the demos                               |
+| [Report Example](https://luskyle.github.io/antelope/en/report/)        | the visual report in full (resdemo instance embedded) plus per-block walkthrough |
 | [Commands](https://luskyle.github.io/antelope/en/commands/)            | command parameters, behavior and exit codes                                 |
 | [Incremental Build](https://luskyle.github.io/antelope/en/incremental-build/) | when things rebuild, how the hash baseline and dep files work        |
 | [Compilers](https://luskyle.github.io/antelope/en/compilers/)          | gxx / llvm / msvc support and target types                                  |

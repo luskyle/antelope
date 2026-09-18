@@ -83,6 +83,7 @@ antel analyze    # 生成可视化分析报告 report.html
 | [快速开始](https://luskyle.github.io/antelope/quick-start/)       | 安装、init、最小配置、构建与运行                                                    |
 | [配置参考](https://luskyle.github.io/antelope/configuration/)     | antel.json 全部字段（含 pkg_config / data_files / gresource / embed）与构建目录布局 |
 | [示例与效果图](https://luskyle.github.io/antelope/examples/)      | GTK 计算器、资源打包演示的完整配置与运行效果                                        |
+| [报告示例](https://luskyle.github.io/antelope/report/)           | 可视化报告完整效果（resdemo 实例嵌入）与十个区块逐项讲解                            |
 | [命令参考](https://luskyle.github.io/antelope/commands/)          | 各命令的参数、行为与退出码                                                          |
 | [增量构建](https://luskyle.github.io/antelope/incremental-build/) | 什么时候重编，hash 基线与依赖文件如何工作                                           |
 | [编译器支持](https://luskyle.github.io/antelope/compilers/)       | gxx / llvm / msvc 与目标类型的支持细节                                              |
