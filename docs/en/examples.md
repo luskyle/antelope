@@ -221,12 +221,15 @@ compilation.
 ## libpng: static/shared targets (`ref`)
 
 Location: `demos/libpng/`. This mirrors upstream CMake's default
-`PNG_STATIC=ON` and `PNG_SHARED=ON` with `antel.json` and `shared.json`. On
+`PNG_STATIC=ON` and `PNG_SHARED=ON` with `static.json` and `shared.json`. On
 x86_64 the configs also enable
 `PNG_INTEL_SSE_OPT` and compile the two SSE2 sources. `shared.json` links zlib
 through `pkg_config`; consumers of the static archive must link zlib and libm.
 `before_build` uses the upstream prebuilt config header and generates the ELF
 version script with the C preprocessor and AWK; the libpng targets need no CMake.
+
+See the [libpng case study](libpng-case-study.md) for generated files, the PNG
+window application, and isolated installation and removal.
 
 ```bash
 cd demos/libpng

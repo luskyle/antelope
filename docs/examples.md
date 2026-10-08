@@ -216,11 +216,13 @@ ar t cjson_antel/libcjson.a
 ## libpng：static/shared 双目标（ref）
 
 位置：`demos/libpng/`。对应上游 CMake 默认的 `PNG_STATIC=ON` 和 `PNG_SHARED=ON`，
-分别由 `antel.json`、`shared.json` 构建静态库和版本化共享库。上游 CMake 只用于生成
+分别由 `static.json`、`shared.json` 构建静态库和版本化共享库。
 当前 x86_64 target 还启用 `PNG_INTEL_SSE_OPT` 并编译两个 SSE2 源文
 件。`shared.json` 通过 `pkg_config` 链接 zlib；静态归档的使用者还需自行链接 zlib 和
 libm。`before_build` 使用上游预置配置头，并通过 C 预处理器和 AWK 生成 ELF version
 script；libpng 目标不需要 CMake。
+
+完整的生成机制、PNG 窗口应用、独立安装与卸载见[成功案例：libpng](libpng-case-study.md)。
 
 ```bash
 cd demos/libpng

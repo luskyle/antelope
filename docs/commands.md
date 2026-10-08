@@ -82,6 +82,31 @@ antel install
 会被拒绝。若父目录需要管理员权限，可自行执行 `sudo antel install`。不自动注册系统
 PATH 或动态库缓存；应用可使用 `$ORIGIN/../lib` RPATH，也可单次启动时指定 `LD_LIBRARY_PATH`。
 
+### 安装清单
+
+`.antel-install` 是安装器自动生成的 JSON 清单，示意内容如下：
+
+```json
+{
+	"version": 1,
+	"files": {
+		"bin/pngviewer": "pngviewer",
+		"lib/libpng16.so.16.60.git": "png16",
+		"lib/libpng16.so.16": "png16",
+		"share/pngviewer_pngviewer/testdata/antel-logo.png": "pngviewer"
+	}
+}
+```
+
+`version` 是清单格式版本，不是软件版本；`files` 的键是相对独立安装目录的文件或
+软链路径，值是所属构建项目名，不是 `install.json` 中的包目录名。
+安装成功写入的文件会逐个登记，重复安装保留原有记录；卸载按清单删除，`projects`
+据此筛选项目。原构建目录不存在时，清单仍能支持卸载。
+
+清单不参与程序运行，但不要手动删除或修改，否则安装器无法可靠识别管理目录及文件。
+有用户额外文件时，卸载会保留这些文件和空清单，以便以后重新安装或重复卸载。
+旧版空标记的迁移方法见下节。
+
 ## uninstall
 
 读取当前目录的同一份 `install.json`，根据独立安装目录中的 `.antel-install` 清单卸载：
