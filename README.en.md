@@ -29,6 +29,7 @@
 - **Aggregated diagnostics**: parallel compile output is captured per unit — success prints just a warning count, failure replays each file's diagnostics grouped and counted instead of being drowned in interleaved output
 - **Visual analysis report**: `report: true` or `antel analyze` produces a self-contained `report.html` covering artifacts, incremental state, compiler flags, symbols, header dependencies, size distribution, dynamic dependencies and log inventory — open it in any browser
 - **Third-party libraries without copying flags**: `pkg_config: ["libcurl"]` injects `pkg-config`'s `--cflags/--libs` automatically, no hand-written `-I`/`-l`
+- **Git project references**: `ref` shallow-clones multiple repositories into `.antel/refs/` before compilation, with optional branch selection; list downloaded source files under `source`
 - **One-click resource packaging**: `data_files` (copied into the output dir), `gresource` (GLib resources compiled into the binary), `embed` (any binary embedded via `ld -r -b binary`) — directory distribution or single-file distribution; resource changes trigger recompilation/relinking automatically
 - **Versioned shared libraries**: `version` / `soname` / `rpath` produce `libX.so.<version>` plus symlinks; consumers link against the SONAME and load it via `$ORIGIN` rpath
 - **Sanitizers & coverage**: `sanitize: ["address", "undefined"]` and `coverage: true` inject the flags in one line; run the binary and `gcov` produces a coverage report
@@ -56,6 +57,7 @@ antel analyze    # generate report.html visual analysis
 | Command       | What it does                                                            |
 | ------------- | ----------------------------------------------------------------------- |
 | init          | interactively generate antel.json                                       |
+| fetch-ref     | download configured Git project references without compiling           |
 | build         | build the changed parts                                                 |
 | sync-baseline | refresh the hash baseline without compiling (align bookkeeping after hand-running a rule file) |
 | rebuild       | rebuild everything, whether it was built before or not                  |
@@ -89,7 +91,7 @@ Full documentation lives at [https://luskyle.github.io/antelope/](https://luskyl
 | [Compilers](https://luskyle.github.io/antelope/en/compilers/)          | gxx / llvm / msvc support and target types                                  |
 | [Development](https://luskyle.github.io/antelope/en/development/)      | testing, packaging, release flow and workflows                               |
 
-Built-in examples under `demos/` (all buildable and runnable): `helloworld` (single file), `cdemo` (multi-file), `gtkcalc` (libadwaita calculator), `resdemo` (resource packaging GUI), `antelstats` (versioned shared library + sanitizer/coverage).
+Built-in examples under `demos/`: `helloworld` (single file), `cdemo` (multi-file), `gtkcalc` (libadwaita calculator), `resdemo` (resource packaging GUI), `antelstats` (versioned shared library + sanitizer/coverage), and `libyaml` (fetches a public upstream source tree through `ref` and builds it with antel).
 
 ## Development
 

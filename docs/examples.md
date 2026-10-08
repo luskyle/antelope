@@ -182,6 +182,22 @@ antel rebuild
 !!! note "为什么能放心走增量"
     `glib-compile-resources` 对同样的输入生成**逐字节相同**的输出（已实测），因此 gresource 源可以安全进入 antel 的 hash 基线；`ld -r -b binary` 的符号命名是确定的规则：`assets/payload.bin` → `_binary_assets_payload_bin_start/_end/_size`（路径里非字母数字字符全部换成下划线）。这两条是设计文档（DESIGN.md）与测试里明确的契约。
 
+## libyaml：公开上游项目（ref）
+
+位置：`demos/libyaml/`。这个示例通过 `ref` 获取公开的 libyaml `release/0.2.5`
+分支，并由 Antelope 编译 8 个 C 源文件。配置显式列出源文件和头文件路径；原先由
+CMake 生成的版本宏改为直接传给编译器，因此不需要 CMakeLists 或生成头文件。
+
+首次构建需要网络和 Git：
+
+```bash
+cd demos/libyaml
+antel rebuild
+```
+
+上游源码缓存在 `.antel/refs/libyaml`，静态库位于 `yaml_antel/libyaml.a`。引用缓存
+不会被 `antel clean` 删除。
+
 ## antelstats：共享库与消费者
 
 位置：`demos/antelstats/`。一个统计分析小工具：共享库 `libantelstats` 提供均值/标准差/中位数等统计函数，可执行程序调用它打印报表。**只用了两个配置文件**——库的生产形态与可执行程序的消费形态——没有其他花活；示例数据直接写死在 `main.c` 里，运行不需要任何外部文件。

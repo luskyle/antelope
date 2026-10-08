@@ -6,6 +6,7 @@
 | -------------------- | ---------- | -------- | ------------------------------------------------------------------------------------------ |
 | projectName          | string     | yes      | Project name; also determines the output directory name and the generated target name. Must not be empty and may only contain letters, digits, underscores, dots and hyphens |
 | source               | string[]   | yes      | Paths of the c/c++ source files to compile, relative to the directory containing the config file; must not be empty |
+| ref                  | object[]   | no       | Git projects to shallow-clone before compilation; each entry has `url` and optional `branch` and `name` |
 | include_directories  | string[]   | no       | Header search paths, passed to the compiler as `-I`; the files in them participate in change detection |
 | target_type          | string     | yes      | `static`, `shared` or `exe` (case-insensitive)                                              |
 | compiler             | string     | yes      | `msvc`, `gxx` or `llvm` (case-insensitive)                                                  |
@@ -44,6 +45,31 @@ Paths are relative to the directory containing the config file; subdirectories u
 ```
 
 Each source file compiles to one object file under `obj/`, named by replacing path separators with underscores: `src/main.c` → `obj/src_main.o`. That means `src/main.c` and `src_main.c` would collide on the same object file name, so keep them apart.
+
+### ref
+
+`ref` shallow-clones Git projects into `.antel/refs/` before `antel build` or `antel rebuild` compiles:
+
+```json
+{
+  "ref": [
+    {
+      "url": "https://github.com/example/libfoo.git",
+      "branch": "stable",
+      "name": "libfoo"
+    },
+    {
+      "url": "https://github.com/example/libbar.git",
+      "branch": "main"
+    }
+  ]
+}
+```
+
+- `url` is required. `branch` is optional and defaults to the remote's default branch. If omitted, `name` is derived from the repository URL.
+- The projects above are cloned to `.antel/refs/libfoo` and `.antel/refs/libbar`. Existing checkouts are not updated automatically; remove the corresponding directory before selecting another branch or fetching newer commits.
+- `ref` only acquires source trees; it does not add files to the build automatically. List required `.c` files under `source` and header directories under `include_directories`.
+- Reference checkouts are separate from build artifacts and are preserved by `antel clean`.
 
 ### include_directories
 

@@ -15,6 +15,7 @@ class AntelJsonCpp():
         json_dict.update({"target_type":self.targetType})
         json_dict.update({"compiler":self.compiler})
         json_dict.update({"source":[]})
+        json_dict.update({"ref":[]})
         json_dict.update({"exclude_source":[]})
         json_dict.update({"include_directories":[]})
         json_dict.update({"compile_args":[

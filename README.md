@@ -29,6 +29,7 @@
 - **诊断聚合**：并行编译输出按单元捕获——成功只汇总警告数，失败按文件分组整块回放并计数，不被并发刷屏淹没
 - **可视化分析报告**：`report: true` 或 `antel analyze` 生成自包含的 `report.html`，覆盖产物、增量状态、编译参数、符号表、头文件依赖、大小分布、动态依赖与日志清单，浏览器直接打开
 - **第三方库零手抄**：`pkg_config: ["libcurl"]` 自动注入 `pkg-config` 的 `--cflags/--libs`，不手写 `-I`/`-l`
+- **Git 项目引用**：`ref` 可在编译前浅克隆多个 Git 仓库到 `.antel/refs/`，支持指定分支；下载的源文件按需列入 `source`
 - **运行资源一键打包**：`data_files`（复制进输出目录）、`gresource`（GLib 资源编进二进制）、`embed`（任意二进制经 `ld -r -b binary` 嵌入）三种形态，支持目录分发与单文件分发；资源变化自动触发重编/重链
 - **版本化共享库**：`version` / `soname` / `rpath` 产出 `libX.so.<版本>` 与软链，消费端按 SONAME 链接、`$ORIGIN` rpath 加载
 - **消毒器与覆盖率**：`sanitize: ["address", "undefined"]` 与 `coverage: true` 一键注入，运行后 `gcov` 直接出覆盖率报告
@@ -56,6 +57,7 @@ antel analyze    # 生成可视化分析报告 report.html
 | 命令          | 作用                                                 |
 | ------------- | ---------------------------------------------------- |
 | init          | 交互式生成 antel.json                                |
+| fetch-ref     | 只下载配置中声明的 Git 项目引用，不编译              |
 | build         | 构建项目差异部分                                     |
 | sync-baseline | 只刷新 hash 基线，不编译（手工跑规则文件后对齐簿记） |
 | rebuild       | 重新构建项目。不管项目有否被构建过，都重新构建       |
@@ -89,7 +91,7 @@ antel analyze    # 生成可视化分析报告 report.html
 | [编译器支持](https://luskyle.github.io/antelope/compilers/)       | gxx / llvm / msvc 与目标类型的支持细节                                              |
 | [开发与发布](https://luskyle.github.io/antelope/development/)     | 测试、打包、发版流程与工作流                                                        |
 
-自带示例（`demos/` 下，均可直接构建运行）：`helloworld`（单文件）、`cdemo`（多文件）、`gtkcalc`（libadwaita 计算器）、`resdemo`（资源打包 GUI 演示）、`antelstats`（版本化动态库 + 消毒器/覆盖率）。
+自带示例（`demos/` 下）：`helloworld`（单文件）、`cdemo`（多文件）、`gtkcalc`（libadwaita 计算器）、`resdemo`（资源打包 GUI 演示）、`antelstats`（版本化动态库 + 消毒器/覆盖率）、`libyaml`（通过 `ref` 获取公开上游源码并构建）。
 
 ## 开发
 

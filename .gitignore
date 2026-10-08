@@ -7,6 +7,7 @@ build/
 *.whl
 .pytest_cache/
 site/
+**/.antel/refs/
 
 test/log
 test/obj

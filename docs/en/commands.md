@@ -7,6 +7,7 @@
 | Command | Purpose | Supports `-f` |
 | ------- | ------- | -------------- |
 | `init`  | Interactively generate `antel.json` | No |
+| `fetch-ref` | Download configured Git project references without compiling | Yes |
 | `build` | Build the changed parts of the project | Yes |
 | `sync-baseline` | Only refresh the hash baseline without compiling (to realign bookkeeping after manually running internal rule files) | Yes |
 | `rebuild` | Rebuild the project regardless of whether it has been built before | Yes |
@@ -23,6 +24,17 @@ antel build --file release
 ```
 
 The output directory is suffixed with the configuration file name (`<project name>_<configuration name>`), so the same source tree can produce different targets with different configurations without any interference.
+
+## fetch-ref
+
+Prepare the configured `ref` repositories without compiling or linking:
+
+```bash
+antel fetch-ref
+antel fetch-ref -f release
+```
+
+References are downloaded under `.antel/refs/`; subsequent `build` and `rebuild` commands reuse these checkouts. The first download requires Git and network access.
 
 ## build and rebuild
 

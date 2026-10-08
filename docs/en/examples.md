@@ -182,6 +182,25 @@ Every stage of a build lands an auditable artifact, and `antel analyze` folds th
 !!! note "Why incremental can be trusted"
     `glib-compile-resources` emits **byte-identical output** for identical input (verified), so the gresource source can safely join antel's hash baseline; `ld -r -b binary` symbol naming follows a deterministic rule: `assets/payload.bin` → `_binary_assets_payload_bin_start/_end/_size` (every non-alphanumeric character becomes `_`). Both rules are explicit contracts in DESIGN.md and the tests.
 
+## libyaml: public upstream project (`ref`)
+
+Location: `demos/libyaml/`. This demo uses `ref` to fetch the public libyaml
+`release/0.2.5` branch, then compiles its eight C translation units with
+Antelope. The config explicitly lists source files and include paths. Version
+macros that CMake normally puts in a generated header are passed directly to the
+compiler, so no CMakeLists or generated header is needed.
+
+The first build requires network access and Git:
+
+```bash
+cd demos/libyaml
+antel rebuild
+```
+
+The upstream source is cached under `.antel/refs/libyaml`, and the static library
+is written to `yaml_antel/libyaml.a`. `antel clean` preserves the reference
+checkout.
+
 ## antelstats: shared library & consumer
 
 Location: `demos/antelstats/`. A small statistics tool: the shared library `libantelstats` provides mean/stddev/median helpers, and the executable calls them to print a report. **Only two config files** — the library's production shape and the executable's consumer shape — nothing fancy; sample data is baked into `main.c`, so running needs no external input.

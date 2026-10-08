@@ -1,0 +1,35 @@
+{
+    "projectName": "yaml",
+    "target_type": "static",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/yaml/libyaml.git",
+            "branch": "release/0.2.5",
+            "name": "libyaml"
+        }
+    ],
+    "source": [
+        ".antel/refs/libyaml/src/api.c",
+        ".antel/refs/libyaml/src/dumper.c",
+        ".antel/refs/libyaml/src/emitter.c",
+        ".antel/refs/libyaml/src/loader.c",
+        ".antel/refs/libyaml/src/parser.c",
+        ".antel/refs/libyaml/src/reader.c",
+        ".antel/refs/libyaml/src/scanner.c",
+        ".antel/refs/libyaml/src/writer.c"
+    ],
+    "include_directories": [
+        ".antel/refs/libyaml/include"
+    ],
+    "compile_args": [
+        "-O2",
+        "-Wall",
+        "-DYAML_DECLARE_STATIC",
+        "-DYAML_VERSION_MAJOR=0",
+        "-DYAML_VERSION_MINOR=2",
+        "-DYAML_VERSION_PATCH=5",
+        "-DYAML_VERSION_STRING=\"0.2.5\""
+    ],
+    "link_args": []
+}

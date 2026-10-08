@@ -6,6 +6,7 @@
 | ------------------- | ---------- | ---- | -------------------------------------------------------------------- |
 | projectName         | 字符串     | 是   | 项目名，同时决定输出目录名与生成目标名，不能为空，且只能含字母、数字、下划线、点与连字符 |
 | source              | 字符串数组 | 是   | 参与编译的 c/c++ 源文件路径，相对配置文件所在目录，不能为空          |
+| ref                 | 对象数组   | 否   | 编译前浅克隆的 Git 项目；每项包含 `url`，可选 `branch`、`name`       |
 | include_directories | 字符串数组 | 否   | 头文件搜索路径，作为 `-I` 传给编译器，其中的文件参与变更检测         |
 | target_type         | 字符串     | 是   | `static`、`shared`、`exe`，不区分大小写                              |
 | compiler            | 字符串     | 是   | `msvc`、`gxx`、`llvm`，不区分大小写                                  |
@@ -44,6 +45,31 @@
 ```
 
 每个源文件编译成 `obj/` 下的一个目标文件，命名规则是把路径分隔符替换成下划线：`src/main.c` → `obj/src_main.o`。因此 `src/main.c` 与 `src_main.c` 会撞到同一个目标文件名，需要避开。
+
+### ref
+
+`ref` 会在 `antel build` / `antel rebuild` 编译前将 Git 项目浅克隆到 `.antel/refs/`：
+
+```json
+{
+  "ref": [
+    {
+      "url": "https://github.com/example/libfoo.git",
+      "branch": "stable",
+      "name": "libfoo"
+    },
+    {
+      "url": "https://github.com/example/libbar.git",
+      "branch": "main"
+    }
+  ]
+}
+```
+
+- `url` 必填；`branch` 可省略，省略时使用远端默认分支。`name` 可省略，默认从仓库 URL 推导。
+- 上例分别下载到 `.antel/refs/libfoo` 和 `.antel/refs/libbar`。已有缓存不会自动更新；改分支或需要拉取新提交时，删除对应目录后再构建。
+- `ref` 只负责获取源码，不会自动将文件加入构建。按需把下载路径下的 `.c` 文件列入 `source`，把头文件目录列入 `include_directories`。
+- 引用项目缓存独立于构建产物，`antel clean` 不会删除它。
 
 ### include_directories
 

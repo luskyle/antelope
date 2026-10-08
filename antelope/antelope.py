@@ -17,6 +17,7 @@ from antelope.compiler.compiler import *
 from antelope.linker.linker import *
 from antelope.makefile import *
 from antelope.resources import *
+from antelope.refs import *
 from antelope.analyze.analyzor import *
 from antelope.cli.init_json import *
 from antelope.cli.console import *
@@ -50,6 +51,7 @@ class Antelope:
         self.data_files = []
         self.gresource = ''
         self.embeds = []
+        self.ref = []
 
         self.dir = Directory()
         self.console = Console()
@@ -66,6 +68,7 @@ class Antelope:
 
         self.resource = ResourceManager(self.data_files, self.gresource, self.embeds,
                                         output_dir=self.output_dir)
+        self.ref_manager = RefManager(self.ref)
 
         compilerObj = Compiler(self.project_name, self.source,
                             self.include_directories, self.target_type,
@@ -125,6 +128,8 @@ class Antelope:
     def build(self):
         self.buildType = BuildType.Build
 
+        self.ref_manager.prepare()
+
         self.dir.MakeDirectory(f"{self.output_dir}/obj/")
         self.dir.MakeDirectory(f"{self.output_dir}/log/")
 
@@ -152,6 +157,7 @@ class Antelope:
 
     def rebuild(self):
         self.buildType = BuildType.Rebuild
+        self.ref_manager.prepare()
         self.dir.RemoveFiles(self.output_dir, GENERATED_TARGETS)
 
         self.dir.ClearMakeDirectory(f"{self.output_dir}/obj/")
@@ -345,13 +351,17 @@ def readProjectName(config:dict):
         raise ConfigError(f'projectName 只能包含字母、数字、下划线、点与连字符，当前含非法字符：{invalid}')
     return name
 
-def parseJsonConfig(file:str='antel'):
+def loadJsonConfig(file:str='antel'):
     external_json = External_Json()
 
     if not os.path.exists(f'./{file}.json'):
         raise ConfigError(f'{file}.json is not exist!')
 
-    config = external_json.deserialize(f'./{file}.json')
+    return external_json.deserialize(f'./{file}.json')
+
+
+def parseJsonConfig(file:str='antel'):
+    config = loadJsonConfig(file)
     antel = Antelope()
 
     antel.project_name = readProjectName(config)
@@ -388,6 +398,7 @@ def parseJsonConfig(file:str='antel'):
 
     antel.compile_args_list = readList(config, 'compile_args')
     antel.link_args_list = readList(config, 'link_args')
+    antel.ref = readRefs(config)
 
     antel.jobs = readJobs(config)
     antel.backend = readBackend(config)
@@ -429,6 +440,18 @@ def main():
 def init():
     init = InitJson()
     init.createFromTemplate()
+
+@main.command(name='fetch-ref', help='只下载配置中声明的 Git 项目引用，不编译')
+@click.option('--file', '-f', default='antel', help='指定一个配置文件')
+@handleBuildError
+def fetch_ref(file):
+    refs = readRefs(loadJsonConfig(file))
+    if len(refs) == 0:
+        print('配置中没有 ref 项目。')
+        return
+
+    RefManager(refs).prepare()
+    print('fetch-ref finished!')
 
 @main.command(help='构建项目差异部分')
 @click.option('--file', '-f', default='antel', help='指定一个配置文件')

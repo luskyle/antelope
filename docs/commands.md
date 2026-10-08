@@ -7,6 +7,7 @@
 | 命令      | 作用                                     | 支持 `-f` |
 | --------- | ---------------------------------------- | --------- |
 | `init`    | 交互式生成 `antel.json`                  | 否        |
+| `fetch-ref` | 只下载配置中声明的 Git 项目引用，不编译 | 是        |
 | `build`   | 构建项目差异部分                         | 是        |
 | `sync-baseline` | 只刷新 hash 基线，不编译（手工跑过内部规则文件后对齐簿记） | 是 |
 | `rebuild` | 重新构建项目，不管项目有否被构建过       | 是        |
@@ -23,6 +24,17 @@ antel build --file release
 ```
 
 输出目录会带上配置文件名（`<项目名>_<配置文件名>`），因此同一份源码可以用多套配置产出不同目标，互不干扰。
+
+## fetch-ref
+
+只准备配置中的 `ref` 仓库，不编译或链接：
+
+```bash
+antel fetch-ref
+antel fetch-ref -f release
+```
+
+引用仓库默认下载到 `.antel/refs/`，后续 `build` / `rebuild` 会复用这些缓存。首次下载需要 Git 和网络连接。
 
 ## build 与 rebuild
 
