@@ -27,6 +27,38 @@ the usual symlinks. Antel's prepare step copies upstream's standard
 `pnglibconf.h` to `build/libpng-generated` and generates `libpng.vers` from
 upstream `vers.c` with the C preprocessor and `dfn.awk`; CMake is not needed.
 
+## PNG viewer window
+
+`pngviewer.json` builds a GTK 3 window application from `pngviewer.c`. PNG
+decoding uses the generated `png16_shared/libpng16.so`, not GTK's image loader.
+GTK supplies the window, file chooser, and drawing surface. Install the GTK 3
+development package (`libgtk-3-dev` on Debian/Ubuntu) and run in a desktop session:
+
+```bash
+antel rebuild -f shared
+antel rebuild -f pngviewer
+./pngviewer_pngviewer/pngviewer
+./pngviewer_pngviewer/pngviewer /path/to/image.png
+```
+
+With no path, it opens Antelope's transparent logo copied into the target's
+`testdata/` directory. The toolbar provides Open, Zoom Out, Zoom In, and Fit to
+Window; transparent pixels appear over a checkerboard. Invalid files show an error
+without discarding the current image. Images are limited to 16384 pixels per
+dimension and 256 MiB of decoded RGBA data.
+
+The executable uses `$ORIGIN/../png16_shared` to find the generated shared
+library. Keep that sibling directory when moving the application. To check
+decoding and window rendering automatically in a graphical session:
+
+```bash
+./pngviewer_pngviewer/pngviewer --smoke-test
+ldd pngviewer_pngviewer/pngviewer | grep libpng
+```
+
+The smoke test exits after rendering and saves a window capture to
+`/tmp/antel-pngviewer.png`.
+
 ## Upstream CMake executables
 
 The `PNG_TESTS` block defines six standalone test programs and the

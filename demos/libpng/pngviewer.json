@@ -1,0 +1,14 @@
+{
+    "projectName": "pngviewer",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "source": ["pngviewer.c"],
+    "include_directories": [],
+    "compile_args": ["-O2", "-Wall", "-Wextra", "-Ibuild/libpng-generated", "-I.antel/refs/libpng"],
+    "link_args": ["png16_shared/libpng16.so", "-lm"],
+    "pkg_config": ["gtk+-3.0"],
+    "rpath": ["$ORIGIN/../png16_shared"],
+    "data_files": [
+        {"from": "../../docs/images/logo.png", "to": "testdata/antel-logo.png"}
+    ]
+}
