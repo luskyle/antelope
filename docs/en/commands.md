@@ -15,8 +15,10 @@
 | `link`  | Link only, without compiling | Yes |
 | `analyze` | Generate a visual analysis report `report.html` | Yes |
 | `run`   | Run the compiled result | Yes |
+| `install` | Install built targets using the current directory's `install.json` | No |
+| `uninstall` | Remove installed targets using `install.json` and the install manifest | No |
 
-All commands except `init` accept `--file` / `-f` to specify the configuration file name, which defaults to `antel`, corresponding to `antel.json`:
+All commands except `init`, `install`, and `uninstall` accept `--file` / `-f` to specify the configuration file name, which defaults to `antel`, corresponding to `antel.json`:
 
 ```bash
 antel rebuild -f gcc
@@ -46,6 +48,90 @@ antel rebuild    # wipe obj/ and log/, full rebuild
 How `build` decides what to compile is described in [Incremental Build](incremental-build.md): a source file is recompiled only when it or one of its dependencies has changed, or when its object file or dependency file is missing. When nothing differs, it only prints 「项目没有改动」 and does nothing else.
 
 Use `rebuild` for the first build, after `clean`, or whenever you suspect the incremental state is off.
+
+## install
+
+Reads `install.json` from the current directory and scans the build JSON configs
+in that directory to install existing targets. It does not build, fetch refs, or
+run hooks, and does not require the original compilation dependencies.
+
+```json
+{
+	"install_path": "/usr/local",
+	"projectName": "libpng"
+}
+```
+
+`install_path` is required. Absolute paths, paths relative to the current
+directory, and `~` are supported. Required `projectName` names the new isolated
+installation directory. The example installs entirely inside `/usr/local/libpng/`,
+not the system `bin/lib/share` directories. Optional `projects` accepts one build
+project name or a nonempty array, such as `["png16", "pngviewer"]`. Omit it to
+install all built projects. Explicitly selected projects must have artifacts.
+
+```bash
+antel install
+```
+
+- Executables go to `<install_path>/<projectName>/bin/`; static and shared libraries
+	go to `lib/` within that isolated directory.
+- File permissions and versioned library symlinks are preserved. Reinstalling
+	updates existing files. Conflicting artifacts from different configurations
+	cause an error before copying starts.
+- Deployed `data_files` go to `share/<project name>_<config name>/`, preserving
+	relative paths. Applications must support this resource layout; the installer
+	does not rewrite resource paths or RPATH in binaries.
+- Source, headers, objects, logs, and reports are not copied. Invalid configs,
+	missing resources, and permission failures exit nonzero.
+
+An `.antel-install` manifest records installed files and their owning projects for repeat installs.
+Existing unmanaged directories and escaping symlinks are rejected. Run
+`sudo antel install` yourself if the parent requires administrator privileges.
+The installer does not register system PATH entries or library caches. Use an
+RPATH such as `$ORIGIN/../lib` or set `LD_LIBRARY_PATH` for an individual launch.
+
+## uninstall
+
+Reads the same `install.json` from the current directory and removes files
+recorded in the isolated installation's `.antel-install` manifest:
+
+```bash
+antel uninstall
+```
+
+`install_path` and `projectName` identify the installation directory. Optional
+`projects` removes only records owned by those build projects; omit it to remove
+all records. Neither build configs nor original build artifacts are required.
+
+Only recorded files and symlinks are removed. Empty directories are cleaned up;
+manually added files are preserved. The isolated directory is deleted only when
+empty, never its parent. An absent installation directory is a successful no-op.
+Invalid manifests, escaping paths, and permission failures exit nonzero and can
+be retried after the problem is corrected.
+
+Legacy empty `.antel-install` markers must first be upgraded by rerunning
+`antel install`. Uninstall does not clean files from the former system-wide
+`bin/lib/share` layout or run `ldconfig`. Run `sudo antel uninstall` yourself
+when administrator privileges are needed.
+
+### Temporary legacy system cleanup
+
+For earlier installs directly into `<install_path>/bin`, `lib`, and `share`
+without a manifest, explicitly opt into legacy cleanup:
+
+```bash
+antel uninstall --legacy-system --dry-run
+sudo antel uninstall --legacy-system
+```
+
+This does not uninstall the isolated `<install_path>/<projectName>` directory.
+Current build configs and surviving artifacts determine the old paths. Every
+existing candidate must match the local file bytes or symlink target; any mismatch
+prevents all deletion. The `projects` filter still applies; absent old files are
+skipped. Preview first, and do not clean or rebuild the original artifacts first.
+Only matching files and empty project resource directories are removed; system
+`bin/lib/share` directories and unrelated files remain. If `ldconfig` was used
+previously, run `sudo ldconfig` yourself after removing the old shared libraries.
 
 ## clean
 

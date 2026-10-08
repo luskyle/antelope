@@ -47,8 +47,9 @@ Window; transparent pixels appear over a checkerboard. Invalid files show an err
 without discarding the current image. Images are limited to 16384 pixels per
 dimension and 256 MiB of decoded RGBA data.
 
-The executable uses `$ORIGIN/../png16_shared` to find the generated shared
-library. Keep that sibling directory when moving the application. To check
+The executable uses `$ORIGIN/../png16_shared` in the build tree and
+`$ORIGIN/../lib` after installation to find the generated shared library.
+To check
 decoding and window rendering automatically in a graphical session:
 
 ```bash
@@ -58,6 +59,58 @@ ldd pngviewer_pngviewer/pngviewer | grep libpng
 
 The smoke test exits after rendering and saves a window capture to
 `/tmp/antel-pngviewer.png`.
+
+## Installation
+
+The local `install.json` sets `install_path` to `/usr/local` and `projectName`
+to `libpng`. It creates an isolated `/usr/local/libpng/` directory for all
+already-built targets:
+
+```bash
+antel install
+```
+
+For system directories, run the same command with administrator privileges if
+needed. Executables go to `/usr/local/libpng/bin`, libraries (including version
+links) to `/usr/local/libpng/lib`, and deployed resources to
+`/usr/local/libpng/share/<build projectName>_<config>/`. No files are installed
+into the system `bin/lib/share` directories, and no `ldconfig` step is required.
+
+The viewer finds its logo in the installed resource directory and can be started
+as `/usr/local/libpng/bin/pngviewer`. To install only the library and viewer, add
+`"projects": ["png16", "pngviewer"]` to `install.json`. The installer does not
+build missing targets or install development headers.
+
+For upstream programs without an installation RPATH, use the bundled library
+for that invocation only, for example:
+
+```bash
+LD_LIBRARY_PATH=/usr/local/libpng/lib /usr/local/libpng/bin/pngvalid
+```
+
+To uninstall using the same local `install.json`:
+
+```bash
+antel uninstall
+```
+
+Use administrator privileges if required. Only files recorded in the installation
+manifest are removed; manually added files remain. Older installs with an empty
+`.antel-install` marker require one `antel install` run to populate the manifest
+before uninstalling. This command does not remove files from earlier installs
+directly into the system `/usr/local/bin`, `/usr/local/lib`, or `/usr/local/share`.
+
+For that earlier system-wide layout only, preview and then explicitly clean it:
+
+```bash
+antel uninstall --legacy-system --dry-run
+sudo antel uninstall --legacy-system
+sudo ldconfig
+```
+
+Keep the original build artifacts for content verification. A mismatched file
+blocks all deletion. This mode preserves the isolated `/usr/local/libpng` directory
+and all unrelated system files.
 
 ## Upstream CMake executables
 

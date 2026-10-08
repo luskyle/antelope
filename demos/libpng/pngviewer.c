@@ -194,8 +194,15 @@ int main(int argc, char **argv)
     viewer.scale = 1;
     viewer.fit = TRUE;
     viewer.smoke = argc > 1 && strcmp(argv[1], "--smoke-test") == 0;
-    char *directory = g_path_get_dirname(argv[0]);
+    char *executable = g_find_program_in_path(argv[0]);
+    char *directory = g_path_get_dirname(executable ? executable : argv[0]);
+    g_free(executable);
     char *sample = g_build_filename(directory, "testdata", "antel-logo.png", NULL);
+    if (!g_file_test(sample, G_FILE_TEST_IS_REGULAR)) {
+        g_free(sample);
+        sample = g_build_filename(directory, "..", "share", "pngviewer_pngviewer",
+                                  "testdata", "antel-logo.png", NULL);
+    }
     const char *filename = argc > (viewer.smoke ? 2 : 1)
                          ? argv[viewer.smoke ? 2 : 1] : sample;
     if (!gtk_init_check(NULL, NULL)) {

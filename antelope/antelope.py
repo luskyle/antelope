@@ -22,6 +22,7 @@ from antelope.analyze.analyzor import *
 from antelope.cli.init_json import *
 from antelope.cli.console import *
 from antelope.runner import *
+from antelope.installer import install_targets, uninstall_targets, uninstall_legacy_system
 
 DEFAULT_JOBS = min(8, os.cpu_count() or 1)
 BACKENDS = ('auto', 'make', 'antel')
@@ -583,3 +584,20 @@ def clean(file):
 def run(file):
     config = parseJsonConfig(file)
     config.run()
+
+@main.command(help='读取当前目录 install.json，将已构建目标安装到指定路径')
+@handleBuildError
+def install():
+    install_targets()
+
+@main.command(help='读取当前目录 install.json，根据安装清单卸载已安装目标')
+@click.option('--legacy-system', is_flag=True, help='临时清理旧版散装到 install_path 的 bin/lib/share 的文件')
+@click.option('--dry-run', is_flag=True, help='仅预览旧版清理候选，不删除文件（需 --legacy-system）')
+@handleBuildError
+def uninstall(legacy_system, dry_run):
+    if legacy_system:
+        uninstall_legacy_system(dry_run=dry_run)
+    elif dry_run:
+        raise ConfigError('--dry-run 当前只用于 --legacy-system')
+    else:
+        uninstall_targets()
