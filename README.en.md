@@ -30,6 +30,7 @@
 - **Visual analysis report**: `report: true` or `antel analyze` produces a self-contained `report.html` covering artifacts, incremental state, compiler flags, symbols, header dependencies, size distribution, dynamic dependencies and log inventory — open it in any browser
 - **Third-party libraries without copying flags**: `pkg_config: ["libcurl"]` injects `pkg-config`'s `--cflags/--libs` automatically, no hand-written `-I`/`-l`
 - **Git project references**: `ref` shallow-clones multiple repositories into `.antel/refs/` before compilation, with optional branch selection; list downloaded source files under `source`
+- **Build hooks**: `before_build` runs generation commands in order, with declared `outputs` triggering recompilation or relinking; `after_build` runs packaging and other commands after a successful build
 - **One-click resource packaging**: `data_files` (copied into the output dir), `gresource` (GLib resources compiled into the binary), `embed` (any binary embedded via `ld -r -b binary`) — directory distribution or single-file distribution; resource changes trigger recompilation/relinking automatically
 - **Versioned shared libraries**: `version` / `soname` / `rpath` produce `libX.so.<version>` plus symlinks; consumers link against the SONAME and load it via `$ORIGIN` rpath
 - **Sanitizers & coverage**: `sanitize: ["address", "undefined"]` and `coverage: true` inject the flags in one line; run the binary and `gcov` produces a coverage report
@@ -91,7 +92,7 @@ Full documentation lives at [https://luskyle.github.io/antelope/](https://luskyl
 | [Compilers](https://luskyle.github.io/antelope/en/compilers/)          | gxx / llvm / msvc support and target types                                  |
 | [Development](https://luskyle.github.io/antelope/en/development/)      | testing, packaging, release flow and workflows                               |
 
-Built-in examples under `demos/`: `helloworld` (single file), `cdemo` (multi-file), `gtkcalc` (libadwaita calculator), `resdemo` (resource packaging GUI), `antelstats` (versioned shared library + sanitizer/coverage), and `libyaml` (fetches a public upstream source tree through `ref` and builds it with antel).
+Built-in examples under `demos/`: `helloworld`, `cdemo`, `gtkcalc`, `resdemo`, `antelstats`, plus public `libyaml`, `cJSON`, `libpng`, `yaml-cpp`, `json-c`, `libuv`, and `libgit2` projects fetched through `ref` and compiled with antel. The libpng demo builds both static and shared targets; json-c, libgit2, and libpng use CMake to generate configuration headers but do not run CMake build.
 
 ## Development
 

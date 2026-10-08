@@ -198,6 +198,153 @@ antel rebuild
 上游源码缓存在 `.antel/refs/libyaml`，静态库位于 `yaml_antel/libyaml.a`。引用缓存
 不会被 `antel clean` 删除。
 
+## cJSON：公开 JSON 库（ref）
+
+位置：`demos/cjson/`。示例通过 `ref` 获取 cJSON 的公开 `master` 分支，由 Antel 将
+核心解析器和 JSON Utils 编译成静态库，不添加本地 consumer。
+
+```bash
+cd demos/cjson
+antel fetch-ref
+antel rebuild
+ar t cjson_antel/libcjson.a
+```
+
+首次运行需要 Git 和网络。源码缓存在 `.antel/refs/cjson`；直接运行 `antel rebuild`
+也会在编译前自动下载缺失的引用。
+
+## libpng：static/shared 双目标（ref）
+
+位置：`demos/libpng/`。对应上游 CMake 默认的 `PNG_STATIC=ON` 和 `PNG_SHARED=ON`，
+分别由 `antel.json`、`shared.json` 构建静态库和版本化共享库。上游 CMake 只用于生成
+当前 x86_64 target 还启用 `PNG_INTEL_SSE_OPT` 并编译两个 SSE2 源文
+件。`shared.json` 通过 `pkg_config` 链接 zlib；静态归档的使用者还需自行链接 zlib 和
+libm。`before_build` 使用上游预置配置头，并通过 C 预处理器和 AWK 生成 ELF version
+script；libpng 目标不需要 CMake。
+
+```bash
+cd demos/libpng
+antel fetch-ref -f static
+python3 prepare_icc_fixture.py
+antel rebuild -f static
+antel rebuild -f shared
+ar t png16_static/libpng16.a | wc -l
+readelf -d png16_shared/libpng16.so.16.60.git | grep SONAME
+```
+
+两个库 target 各包含 17 个上游对象。共享库产物是 `libpng16.so.16.60.git`，SONAME
+为 `libpng16.so.16`，并生成 `libpng16.so.16` 与 `libpng16.so` 软链。首次构建需要
+Git、Python 3、C 编译器、AWK、pkg-config、网络和 zlib 开发包；配置头和 ELF version
+script 均由 `before_build` 自动生成，实际编译由 Antel 完成。
+
+上游 CMake 还注册了 6 个测试程序和 2 个工具，分别对应 `pngtest.json`、
+`pnggetset.json`、`pngvalid.json`、`pngstest.json`、`pngunknown.json`、
+`pngimage.json`、`pngfix.json`、`png-fix-itxt.json`。每个配置独立链接上面的 shared
+target：
+
+```bash
+for target in pngtest pnggetset pngvalid pngstest pngunknown pngimage pngfix png-fix-itxt; do
+    antel rebuild -f "$target"
+done
+```
+
+带图片输入的配置通过 `data_files` 把上游测试图片复制到自己的输出目录：pngtest、
+pngunknown、pngfix、png-fix-itxt 和三个图像例程使用 `pngtest.png`；pngimage 复制
+pngsuite，pngstest 复制 testpngs。`iccfrompng` 使用 `prepare_icc_fixture.py` 生成的
+带 iCCP profile 测试图。新 checkout 首次构建这些配置前，先执行 `antel fetch-ref -f
+static`，让 `data_files` 源路径存在。
+
+示例运行（输入均从各自输出目录读取）：
+
+```bash
+./pngtest_pngtest/pngtest pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
+./pnggetset_pnggetset/pnggetset
+./pngvalid_pngvalid/pngvalid --gamma-16-to-8
+./pngunknown_pngunknown/pngunknown --strict default=discard pngunknown_pngunknown/testdata/pngtest.png
+./pngimage_pngimage/pngimage --list-combos --log pngimage_pngimage/testdata/pngsuite/basn0g08.png
+./pngstest_pngstest/pngstest --log --tmpfile /tmp/ps- pngstest_pngstest/testdata/testpngs/gray-1.png
+./pngfix_pngfix/pngfix --quiet pngfix_pngfix/testdata/pngtest.png
+./png-fix-itxt_png-fix-itxt/png-fix-itxt < png-fix-itxt_png-fix-itxt/testdata/pngtest.png > /tmp/png-fixed.png
+```
+
+另有 4 个不属于上游 CMake target 的 `contrib/examples` 程序，也提供了单独配置：
+`example-iccfrompng`、`example-pngpixel`、`example-pngtopng`、`example-simpleover`。
+例如：
+
+```bash
+for target in example-iccfrompng example-pngpixel example-pngtopng example-simpleover; do
+    antel rebuild -f "$target"
+done
+./iccfrompng_example-iccfrompng/iccfrompng iccfrompng_example-iccfrompng/testdata/icc-profile.png
+./pngpixel_example-pngpixel/pngpixel 0 0 pngpixel_example-pngpixel/testdata/pngtest.png
+./pngtopng_example-pngtopng/pngtopng pngtopng_example-pngtopng/testdata/pngtest.png /tmp/pngtopng.png
+./simpleover_example-simpleover/simpleover simpleover_example-simpleover/testdata/background.png /tmp/simpleover.png
+```
+
+## yaml-cpp：C++ YAML 库（ref）
+
+位置：`demos/yaml-cpp/`。通过 `ref` 获取 yaml-cpp `master`，用 C++11 将上游核心及
+contrib 源文件编译成静态库，不添加本地 consumer。
+
+```bash
+cd demos/yaml-cpp
+antel rebuild
+ar t yaml-cpp_antel/libyaml-cpp.a | wc -l
+```
+
+首次构建需要 Git 和网络。
+
+## json-c：JSON 库（ref + CMake 配置）
+
+位置：`demos/json-c/`。json-c 需要平台探测生成的头文件；这里 CMake 只负责 configure，
+由 Antel 编译其 14 个正式 C 源文件为静态库，不执行 CMake build。
+
+```bash
+cd demos/json-c
+antel fetch-ref
+cmake -S .antel/refs/json-c -B build/json-c-config \
+    -DBUILD_TESTING=OFF -DBUILD_APPS=OFF \
+    -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON \
+    -DDISABLE_EXTRA_LIBS=ON
+antel rebuild
+ar t json-c_antel/libjson-c.a | wc -l
+```
+
+静态库包含 JSON Pointer 和 JSON Patch 支持。
+
+## libuv：Linux 事件循环（ref）
+
+位置：`demos/libuv/`。从 libuv `v1.x` 获取源码，显式选择上游 CMake 对应的 Linux 与
+POSIX 实现，编译成静态库，不包括 Windows/macOS 源文件或本地 consumer。
+
+```bash
+cd demos/libuv
+antel rebuild
+ar t uv_antel/libuv.a | wc -l
+```
+
+本 demo 针对 Linux，使用者链接归档时需要 pthread、dl 和 rt。
+
+## libgit2：大型 Git 库（ref + 配置生成）
+
+位置：`demos/libgit2/`。先通过 `ref` 获取上游，再用 CMake configure 选择当前平台源、
+生成 feature headers 和 compile database；`prepare_antelope.py` 根据数据库生成
+Antel 配置，之后由 Antel 将 196 个上游源文件编译成静态库。
+
+```bash
+cd demos/libgit2
+antel fetch-ref -f refs
+cmake -S .antel/refs/libgit2 -B build/libgit2-config \
+    -DBUILD_TESTS=OFF -DBUILD_CLI=OFF -DBUILD_EXAMPLES=OFF \
+    -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+python3 prepare_antelope.py
+antel rebuild -f generated
+ar t git2_generated/libgit2.a | wc -l
+```
+
+此处 CMake 只配置，不编译；静态库依赖系统 OpenSSL、PCRE 和 zlib，最终 consumer
+链接时也需要这些开发包。
+
 ## antelstats：共享库与消费者
 
 位置：`demos/antelstats/`。一个统计分析小工具：共享库 `libantelstats` 提供均值/标准差/中位数等统计函数，可执行程序调用它打印报表。**只用了两个配置文件**——库的生产形态与可执行程序的消费形态——没有其他花活；示例数据直接写死在 `main.c` 里，运行不需要任何外部文件。

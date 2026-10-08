@@ -1,0 +1,9 @@
+{
+    "ref": [
+        {
+            "url": "https://github.com/libgit2/libgit2.git",
+            "branch": "main",
+            "name": "libgit2"
+        }
+    ]
+}

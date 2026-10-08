@@ -30,6 +30,7 @@
 - **可视化分析报告**：`report: true` 或 `antel analyze` 生成自包含的 `report.html`，覆盖产物、增量状态、编译参数、符号表、头文件依赖、大小分布、动态依赖与日志清单，浏览器直接打开
 - **第三方库零手抄**：`pkg_config: ["libcurl"]` 自动注入 `pkg-config` 的 `--cflags/--libs`，不手写 `-I`/`-l`
 - **Git 项目引用**：`ref` 可在编译前浅克隆多个 Git 仓库到 `.antel/refs/`，支持指定分支；下载的源文件按需列入 `source`
+- **构建钩子**：`before_build` 顺序执行生成脚本，声明 `outputs` 后变化会触发重编或重链；`after_build` 在构建成功后顺序执行打包等脚本
 - **运行资源一键打包**：`data_files`（复制进输出目录）、`gresource`（GLib 资源编进二进制）、`embed`（任意二进制经 `ld -r -b binary` 嵌入）三种形态，支持目录分发与单文件分发；资源变化自动触发重编/重链
 - **版本化共享库**：`version` / `soname` / `rpath` 产出 `libX.so.<版本>` 与软链，消费端按 SONAME 链接、`$ORIGIN` rpath 加载
 - **消毒器与覆盖率**：`sanitize: ["address", "undefined"]` 与 `coverage: true` 一键注入，运行后 `gcov` 直接出覆盖率报告
@@ -85,13 +86,13 @@ antel analyze    # 生成可视化分析报告 report.html
 | [快速开始](https://luskyle.github.io/antelope/quick-start/)       | 安装、init、最小配置、构建与运行                                                    |
 | [配置参考](https://luskyle.github.io/antelope/configuration/)     | antel.json 全部字段（含 pkg_config / data_files / gresource / embed）与构建目录布局 |
 | [示例与效果图](https://luskyle.github.io/antelope/examples/)      | GTK 计算器、资源打包演示的完整配置与运行效果                                        |
-| [报告示例](https://luskyle.github.io/antelope/report/)           | 可视化报告完整效果（resdemo 实例嵌入）与十个区块逐项讲解                            |
+| [报告示例](https://luskyle.github.io/antelope/report/)            | 可视化报告完整效果（resdemo 实例嵌入）与十个区块逐项讲解                            |
 | [命令参考](https://luskyle.github.io/antelope/commands/)          | 各命令的参数、行为与退出码                                                          |
 | [增量构建](https://luskyle.github.io/antelope/incremental-build/) | 什么时候重编，hash 基线与依赖文件如何工作                                           |
 | [编译器支持](https://luskyle.github.io/antelope/compilers/)       | gxx / llvm / msvc 与目标类型的支持细节                                              |
 | [开发与发布](https://luskyle.github.io/antelope/development/)     | 测试、打包、发版流程与工作流                                                        |
 
-自带示例（`demos/` 下）：`helloworld`（单文件）、`cdemo`（多文件）、`gtkcalc`（libadwaita 计算器）、`resdemo`（资源打包 GUI 演示）、`antelstats`（版本化动态库 + 消毒器/覆盖率）、`libyaml`（通过 `ref` 获取公开上游源码并构建）。
+自带示例（`demos/` 下）：`helloworld`、`cdemo`、`gtkcalc`、`resdemo`、`antelstats`，以及通过 `ref` 获取并由 Antel 编译的公开库：`libyaml`、`cjson`、`libpng`、`yaml-cpp`、`json-c`、`libuv`、`libgit2`。libpng 演示 static/shared 双目标；json-c、libgit2 和 libpng 另用 CMake 生成配置头，不调用 CMake build。
 
 ## 开发
 

@@ -1,0 +1,37 @@
+{
+    "projectName": "json-c",
+    "target_type": "static",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/json-c/json-c.git",
+            "branch": "master",
+            "name": "json-c"
+        }
+    ],
+    "source": [
+        ".antel/refs/json-c/arraylist.c",
+        ".antel/refs/json-c/debug.c",
+        ".antel/refs/json-c/json_c_version.c",
+        ".antel/refs/json-c/json_object.c",
+        ".antel/refs/json-c/json_object_iterator.c",
+        ".antel/refs/json-c/json_tokener.c",
+        ".antel/refs/json-c/json_util.c",
+        ".antel/refs/json-c/json_visit.c",
+        ".antel/refs/json-c/linkhash.c",
+        ".antel/refs/json-c/printbuf.c",
+        ".antel/refs/json-c/random_seed.c",
+        ".antel/refs/json-c/strerror_override.c",
+        ".antel/refs/json-c/json_pointer.c",
+        ".antel/refs/json-c/json_patch.c"
+    ],
+    "include_directories": [],
+    "compile_args": [
+        "-O2",
+        "-Wall",
+        "-D_GNU_SOURCE",
+        "-I.antel/refs/json-c",
+        "-Ibuild/json-c-config"
+    ],
+    "link_args": []
+}

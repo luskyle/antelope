@@ -1,0 +1,56 @@
+{
+    "projectName": "yaml-cpp",
+    "target_type": "static",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/jbeder/yaml-cpp.git",
+            "branch": "master",
+            "name": "yaml-cpp"
+        }
+    ],
+    "source": [
+        ".antel/refs/yaml-cpp/src/binary.cpp",
+        ".antel/refs/yaml-cpp/src/convert.cpp",
+        ".antel/refs/yaml-cpp/src/depthguard.cpp",
+        ".antel/refs/yaml-cpp/src/directives.cpp",
+        ".antel/refs/yaml-cpp/src/emit.cpp",
+        ".antel/refs/yaml-cpp/src/emitfromevents.cpp",
+        ".antel/refs/yaml-cpp/src/emitter.cpp",
+        ".antel/refs/yaml-cpp/src/emitterstate.cpp",
+        ".antel/refs/yaml-cpp/src/emitterutils.cpp",
+        ".antel/refs/yaml-cpp/src/exceptions.cpp",
+        ".antel/refs/yaml-cpp/src/exp.cpp",
+        ".antel/refs/yaml-cpp/src/fptostring.cpp",
+        ".antel/refs/yaml-cpp/src/memory.cpp",
+        ".antel/refs/yaml-cpp/src/node.cpp",
+        ".antel/refs/yaml-cpp/src/node_data.cpp",
+        ".antel/refs/yaml-cpp/src/nodebuilder.cpp",
+        ".antel/refs/yaml-cpp/src/nodeevents.cpp",
+        ".antel/refs/yaml-cpp/src/null.cpp",
+        ".antel/refs/yaml-cpp/src/ostream_wrapper.cpp",
+        ".antel/refs/yaml-cpp/src/parse.cpp",
+        ".antel/refs/yaml-cpp/src/parser.cpp",
+        ".antel/refs/yaml-cpp/src/regex_yaml.cpp",
+        ".antel/refs/yaml-cpp/src/scanner.cpp",
+        ".antel/refs/yaml-cpp/src/scanscalar.cpp",
+        ".antel/refs/yaml-cpp/src/scantag.cpp",
+        ".antel/refs/yaml-cpp/src/scantoken.cpp",
+        ".antel/refs/yaml-cpp/src/simplekey.cpp",
+        ".antel/refs/yaml-cpp/src/singledocparser.cpp",
+        ".antel/refs/yaml-cpp/src/stream.cpp",
+        ".antel/refs/yaml-cpp/src/tag.cpp",
+        ".antel/refs/yaml-cpp/src/contrib/graphbuilder.cpp",
+        ".antel/refs/yaml-cpp/src/contrib/graphbuilderadapter.cpp"
+    ],
+    "include_directories": [
+        ".antel/refs/yaml-cpp/include"
+    ],
+    "compile_args": [
+        "-std=c++11",
+        "-O2",
+        "-Wall",
+        "-DYAML_CPP_STATIC_DEFINE"
+    ],
+    "link_args": []
+}

@@ -7,6 +7,8 @@
 | projectName         | 字符串     | 是   | 项目名，同时决定输出目录名与生成目标名，不能为空，且只能含字母、数字、下划线、点与连字符 |
 | source              | 字符串数组 | 是   | 参与编译的 c/c++ 源文件路径，相对配置文件所在目录，不能为空          |
 | ref                 | 对象数组   | 否   | 编译前浅克隆的 Git 项目；每项包含 `url`，可选 `branch`、`name`       |
+| before_build        | 对象数组   | 否   | ref 下载后、增量扫描前按顺序执行；每项含 argv `command` 和可选 `outputs` |
+| after_build         | 对象数组   | 否   | build/rebuild 成功后按顺序执行；每项含 argv `command`                     |
 | include_directories | 字符串数组 | 否   | 头文件搜索路径，作为 `-I` 传给编译器，其中的文件参与变更检测         |
 | target_type         | 字符串     | 是   | `static`、`shared`、`exe`，不区分大小写                              |
 | compiler            | 字符串     | 是   | `msvc`、`gxx`、`llvm`，不区分大小写                                  |
@@ -70,6 +72,40 @@
 - 上例分别下载到 `.antel/refs/libfoo` 和 `.antel/refs/libbar`。已有缓存不会自动更新；改分支或需要拉取新提交时，删除对应目录后再构建。
 - `ref` 只负责获取源码，不会自动将文件加入构建。按需把下载路径下的 `.c` 文件列入 `source`，把头文件目录列入 `include_directories`。
 - 引用项目缓存独立于构建产物，`antel clean` 不会删除它。
+
+### before_build
+
+在引用仓库准备好之后、资源部署和增量扫描之前执行。命令必须写成参数数组，不经 shell
+解析；可选的 `outputs` 列出生成文件，让它们进入 hash 基线。输出内容变化会触发相关源
+文件重编；若输出仅影响链接参数（如 version script），也会触发重链接。
+
+```json
+{
+  "before_build": [
+    {
+      "command": ["python3", "prepare.py", "--mode", "release"],
+      "outputs": ["build/generated/config.h", "build/generated/exports.map"]
+    }
+  ]
+}
+```
+
+命令失败或声明的输出未生成时，构建立即以非零状态结束。
+
+### after_build
+
+在 `antel build` 或 `antel rebuild` 成功完成后，按数组顺序执行每项 `command`。
+命令以 argv 数组传入、不经 shell；增量构建确认没有改动时也会执行。编译或链接失败
+时不会运行；任一后置命令失败都会使 Antel 以非零状态退出。
+
+```json
+{
+  "after_build": [
+    {"command": ["python3", "package.py"]},
+    {"command": ["python3", "notify.py", "--success"]}
+  ]
+}
+```
 
 ### include_directories
 

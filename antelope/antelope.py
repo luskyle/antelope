@@ -52,9 +52,12 @@ class Antelope:
         self.gresource = ''
         self.embeds = []
         self.ref = []
+        self.before_build = []
+        self.after_build = []
 
         self.dir = Directory()
         self.console = Console()
+        self.command = Command()
         self.output_dir = '.'
         self.resource = ResourceManager(output_dir=self.output_dir)
 
@@ -119,7 +122,25 @@ class Antelope:
 
     def get_track_files(self):
         """参与变更检测的文件：配置中的源文件、include 目录下的文件、上次构建记录的依赖、以及资源输入"""
-        return self.source + self.compiler.collect_dependencies() + self.resource.track_files()
+        generated = [output for step in self.before_build for output in step['outputs']]
+        return (self.source + self.compiler.collect_dependencies()
+                + self.resource.track_files() + generated)
+
+    def runBeforeBuild(self):
+        """下载 refs 并顺序执行编译前准备命令。"""
+        self.ref_manager.prepare()
+        for step in self.before_build:
+            print(f'运行 before_build 命令：{step["command"]}')
+            self.command.run_argv(step['command'], echo=True)
+            for output in step['outputs']:
+                if not os.path.exists(output):
+                    raise ConfigError(f'before_build 命令未生成声明的文件：{output}')
+
+    def runAfterBuild(self):
+        """在每次成功完成 build/rebuild 后按配置顺序执行命令。"""
+        for command in self.after_build:
+            print(f'运行 after_build 命令：{command}')
+            self.command.run_argv(command, echo=True)
 
     def save_baseline(self):
         """构建成功后刷新 hash 基线，使下次构建以本次成功构建为比较基准"""
@@ -128,7 +149,7 @@ class Antelope:
     def build(self):
         self.buildType = BuildType.Build
 
-        self.ref_manager.prepare()
+        self.runBeforeBuild()
 
         self.dir.MakeDirectory(f"{self.output_dir}/obj/")
         self.dir.MakeDirectory(f"{self.output_dir}/log/")
@@ -143,9 +164,12 @@ class Antelope:
         stale_sources = self.compiler.get_stale_sources(self.get_project_source(), changed_files)
         resource_set = set(self.resource.track_files())
         resource_changed = bool(set(changed_files) & resource_set)
+        prepare_outputs = {output for step in self.before_build for output in step['outputs']}
+        prepare_output_changed = bool(set(changed_files) & prepare_outputs)
 
-        if stale_sources.__len__() == 0 and not resource_changed:
+        if stale_sources.__len__() == 0 and not resource_changed and not prepare_output_changed:
             self.console.WriteNotice('项目没有改动，无需重新构建. 如需强制全量构建，请使用 antel rebuild 构建.')
+            self.runAfterBuild()
             return
 
         self.dir.RemoveFiles(self.output_dir, GENERATED_TARGETS)
@@ -154,10 +178,11 @@ class Antelope:
         self.linker.link()
         self.save_baseline()
         self.maybe_report()
+        self.runAfterBuild()
 
     def rebuild(self):
         self.buildType = BuildType.Rebuild
-        self.ref_manager.prepare()
+        self.runBeforeBuild()
         self.dir.RemoveFiles(self.output_dir, GENERATED_TARGETS)
 
         self.dir.ClearMakeDirectory(f"{self.output_dir}/obj/")
@@ -169,6 +194,7 @@ class Antelope:
         self.linker.link()
         self.save_baseline()
         self.maybe_report()
+        self.runAfterBuild()
 
     def maybe_report(self):
         """report: true 时在构建成功后自动生成可视化报告。它不参与编译：
@@ -238,6 +264,7 @@ class Antelope:
                          extra_objs=extra_objs)
 
     def link(self):
+        self.runBeforeBuild()
         self.linker.link()
 
     def analyze(self, source=[]):
@@ -252,6 +279,55 @@ def readList(config:dict, key:str):
     if not isinstance(value, list):
         raise ConfigError(f'{key} 必须是数组，当前为 {type(value).__name__}: {value}')
     return list(value)
+
+
+def readBeforeBuild(config:dict):
+    """读取编译前步骤：每步是 argv 数组和可选生成文件清单。"""
+    if 'pre_build' in config:
+        raise ConfigError('pre_build 已更名为 before_build，请更新配置文件')
+
+    value = config.get('before_build', [])
+    if not isinstance(value, list):
+        raise ConfigError(f'before_build 必须是数组，当前为 {type(value).__name__}: {value}')
+
+    steps = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ConfigError(f'before_build[{index}] 必须是对象，当前为：{item}')
+
+        command = item.get('command')
+        if (not isinstance(command, list) or len(command) == 0
+                or any(not isinstance(arg, str) or arg == '' for arg in command)):
+            raise ConfigError(f'before_build[{index}].command 必须是非空字符串数组')
+
+        outputs = item.get('outputs', [])
+        if (not isinstance(outputs, list)
+                or any(not isinstance(path, str) or path == '' for path in outputs)):
+            raise ConfigError(f'before_build[{index}].outputs 必须是字符串数组')
+
+        steps.append({'command': list(command), 'outputs': list(outputs)})
+
+    return steps
+
+
+def readAfterBuild(config:dict):
+    """读取编译完成后顺序执行的 argv 命令列表。"""
+    value = config.get('after_build', [])
+    if not isinstance(value, list):
+        raise ConfigError(f'after_build 必须是数组，当前为 {type(value).__name__}: {value}')
+
+    commands = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ConfigError(f'after_build[{index}] 必须是对象，当前为：{item}')
+
+        command = item.get('command')
+        if (not isinstance(command, list) or len(command) == 0
+                or any(not isinstance(arg, str) or arg == '' for arg in command)):
+            raise ConfigError(f'after_build[{index}].command 必须是非空字符串数组')
+        commands.append(list(command))
+
+    return commands
 
 def readBool(config:dict, key:str, default:bool):
     """读取布尔型配置项"""
@@ -399,6 +475,8 @@ def parseJsonConfig(file:str='antel'):
     antel.compile_args_list = readList(config, 'compile_args')
     antel.link_args_list = readList(config, 'link_args')
     antel.ref = readRefs(config)
+    antel.before_build = readBeforeBuild(config)
+    antel.after_build = readAfterBuild(config)
 
     antel.jobs = readJobs(config)
     antel.backend = readBackend(config)
@@ -465,6 +543,7 @@ def build(file):
 @handleBuildError
 def sync_baseline(file):
     config = parseJsonConfig(file)
+    config.runBeforeBuild()
     config.save_baseline()
     print('sync-baseline finished!')
 

@@ -7,6 +7,8 @@
 | projectName          | string     | yes      | Project name; also determines the output directory name and the generated target name. Must not be empty and may only contain letters, digits, underscores, dots and hyphens |
 | source               | string[]   | yes      | Paths of the c/c++ source files to compile, relative to the directory containing the config file; must not be empty |
 | ref                  | object[]   | no       | Git projects to shallow-clone before compilation; each entry has `url` and optional `branch` and `name` |
+| before_build         | object[]   | no       | Commands run in order after refs are fetched and before change detection; each has argv `command` and optional `outputs` |
+| after_build          | object[]   | no       | Commands run in order after a successful build/rebuild; each has argv `command` |
 | include_directories  | string[]   | no       | Header search paths, passed to the compiler as `-I`; the files in them participate in change detection |
 | target_type          | string     | yes      | `static`, `shared` or `exe` (case-insensitive)                                              |
 | compiler             | string     | yes      | `msvc`, `gxx` or `llvm` (case-insensitive)                                                  |
@@ -70,6 +72,42 @@ Each source file compiles to one object file under `obj/`, named by replacing pa
 - The projects above are cloned to `.antel/refs/libfoo` and `.antel/refs/libbar`. Existing checkouts are not updated automatically; remove the corresponding directory before selecting another branch or fetching newer commits.
 - `ref` only acquires source trees; it does not add files to the build automatically. List required `.c` files under `source` and header directories under `include_directories`.
 - Reference checkouts are separate from build artifacts and are preserved by `antel clean`.
+
+### before_build
+
+Runs after reference checkouts are prepared and before resource deployment and
+incremental scanning. Commands are argv arrays, not shell strings. Optional
+`outputs` are included in the hash baseline: changed generated headers trigger
+recompilation, while changed files used only by the link step trigger relinking.
+
+```json
+{
+  "before_build": [
+    {
+      "command": ["python3", "prepare.py", "--mode", "release"],
+      "outputs": ["build/generated/config.h", "build/generated/exports.map"]
+    }
+  ]
+}
+```
+
+The build exits non-zero if a command fails or a declared output is not created.
+
+### after_build
+
+Runs each `command` in array order after `antel build` or `antel rebuild`
+completes successfully. Commands are argv arrays, not shell strings. This also
+runs when an incremental build finds no changes. It is skipped after a compile or
+link failure; if an after-build command fails, Antel exits non-zero.
+
+```json
+{
+  "after_build": [
+    {"command": ["python3", "package.py"]},
+    {"command": ["python3", "notify.py", "--success"]}
+  ]
+}
+```
 
 ### include_directories
 

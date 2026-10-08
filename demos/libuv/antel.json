@@ -1,0 +1,63 @@
+{
+    "projectName": "uv",
+    "target_type": "static",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/libuv/libuv.git",
+            "branch": "v1.x",
+            "name": "libuv"
+        }
+    ],
+    "source": [
+        ".antel/refs/libuv/src/fs-poll.c",
+        ".antel/refs/libuv/src/idna.c",
+        ".antel/refs/libuv/src/inet.c",
+        ".antel/refs/libuv/src/random.c",
+        ".antel/refs/libuv/src/strscpy.c",
+        ".antel/refs/libuv/src/strtok.c",
+        ".antel/refs/libuv/src/thread-common.c",
+        ".antel/refs/libuv/src/threadpool.c",
+        ".antel/refs/libuv/src/timer.c",
+        ".antel/refs/libuv/src/uv-common.c",
+        ".antel/refs/libuv/src/uv-data-getter-setters.c",
+        ".antel/refs/libuv/src/version.c",
+        ".antel/refs/libuv/src/unix/async.c",
+        ".antel/refs/libuv/src/unix/core.c",
+        ".antel/refs/libuv/src/unix/dl.c",
+        ".antel/refs/libuv/src/unix/fs.c",
+        ".antel/refs/libuv/src/unix/getaddrinfo.c",
+        ".antel/refs/libuv/src/unix/getnameinfo.c",
+        ".antel/refs/libuv/src/unix/loop-watcher.c",
+        ".antel/refs/libuv/src/unix/loop.c",
+        ".antel/refs/libuv/src/unix/pipe.c",
+        ".antel/refs/libuv/src/unix/poll.c",
+        ".antel/refs/libuv/src/unix/process.c",
+        ".antel/refs/libuv/src/unix/random-devurandom.c",
+        ".antel/refs/libuv/src/unix/signal.c",
+        ".antel/refs/libuv/src/unix/stream.c",
+        ".antel/refs/libuv/src/unix/tcp.c",
+        ".antel/refs/libuv/src/unix/thread.c",
+        ".antel/refs/libuv/src/unix/tty.c",
+        ".antel/refs/libuv/src/unix/udp.c",
+        ".antel/refs/libuv/src/unix/linux.c",
+        ".antel/refs/libuv/src/unix/procfs-exepath.c",
+        ".antel/refs/libuv/src/unix/random-getrandom.c",
+        ".antel/refs/libuv/src/unix/random-sysctl-linux.c",
+        ".antel/refs/libuv/src/unix/proctitle.c"
+    ],
+    "include_directories": [
+        ".antel/refs/libuv/include"
+    ],
+    "compile_args": [
+        "-std=gnu11",
+        "-O2",
+        "-Wall",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_LARGEFILE_SOURCE",
+        "-D_GNU_SOURCE",
+        "-D_POSIX_C_SOURCE=200112",
+        "-I.antel/refs/libuv/src"
+    ],
+    "link_args": []
+}

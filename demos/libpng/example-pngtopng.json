@@ -1,0 +1,14 @@
+{
+    "projectName": "pngtopng",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [{"url": "https://github.com/pnggroup/libpng.git", "branch": "libpng16", "name": "libpng"}],
+    "source": [".antel/refs/libpng/contrib/examples/pngtopng.c"],
+    "include_directories": [],
+    "compile_args": ["-O2", "-Wall", "-DPNG_INTEL_SSE_OPT=1", "-Ibuild/libpng-config", "-I.antel/refs/libpng"],
+    "link_args": ["png16_shared/libpng16.so"],
+    "rpath": ["$ORIGIN/../png16_shared"],
+    "data_files": [
+        {"from": ".antel/refs/libpng/pngtest.png", "to": "testdata/pngtest.png"}
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "projectName": "png-fix-itxt",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [{"url": "https://github.com/pnggroup/libpng.git", "branch": "libpng16", "name": "libpng"}],
+    "source": [".antel/refs/libpng/contrib/tools/png-fix-itxt.c"],
+    "include_directories": [],
+    "compile_args": ["-O2", "-Wall"],
+    "link_args": [],
+    "pkg_config": ["zlib"],
+    "data_files": [
+        {"from": ".antel/refs/libpng/pngtest.png", "to": "testdata/pngtest.png"}
+    ]
+}

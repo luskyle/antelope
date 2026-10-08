@@ -1,0 +1,49 @@
+{
+    "projectName": "png16",
+    "target_type": "static",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/pnggroup/libpng.git",
+            "branch": "libpng16",
+            "name": "libpng"
+        }
+    ],
+    "before_build": [
+        {
+            "command": ["python3", "prepare_libpng.py"],
+            "outputs": [
+                "build/libpng-generated/pnglibconf.h",
+                "build/libpng-generated/libpng.vers"
+            ]
+        }
+    ],
+    "source": [
+        ".antel/refs/libpng/png.c",
+        ".antel/refs/libpng/pngerror.c",
+        ".antel/refs/libpng/pngget.c",
+        ".antel/refs/libpng/pngmem.c",
+        ".antel/refs/libpng/pngpread.c",
+        ".antel/refs/libpng/pngread.c",
+        ".antel/refs/libpng/pngrio.c",
+        ".antel/refs/libpng/pngrtran.c",
+        ".antel/refs/libpng/pngrutil.c",
+        ".antel/refs/libpng/pngset.c",
+        ".antel/refs/libpng/pngtrans.c",
+        ".antel/refs/libpng/pngwio.c",
+        ".antel/refs/libpng/pngwrite.c",
+        ".antel/refs/libpng/pngwtran.c",
+        ".antel/refs/libpng/pngwutil.c",
+        ".antel/refs/libpng/intel/intel_init.c",
+        ".antel/refs/libpng/intel/filter_sse2_intrinsics.c"
+    ],
+    "include_directories": [],
+    "compile_args": [
+        "-O2",
+        "-Wall",
+        "-DPNG_INTEL_SSE_OPT=1",
+        "-Ibuild/libpng-generated",
+        "-I.antel/refs/libpng"
+    ],
+    "link_args": []
+}

@@ -201,6 +201,155 @@ The upstream source is cached under `.antel/refs/libyaml`, and the static librar
 is written to `yaml_antel/libyaml.a`. `antel clean` preserves the reference
 checkout.
 
+## cJSON: public JSON library (`ref`)
+
+Location: `demos/cjson/`. This demo fetches the public cJSON `master` branch
+through `ref` and builds the parser and JSON Utils as a static library, without
+adding a local consumer.
+
+```bash
+cd demos/cjson
+antel fetch-ref
+antel rebuild
+ar t cjson_antel/libcjson.a
+```
+
+The first run needs Git and network access. The source is cached under
+`.antel/refs/cjson`; `antel rebuild` also downloads a missing reference before
+compilation.
+
+## libpng: static/shared targets (`ref`)
+
+Location: `demos/libpng/`. This mirrors upstream CMake's default
+`PNG_STATIC=ON` and `PNG_SHARED=ON` with `antel.json` and `shared.json`. On
+x86_64 the configs also enable
+`PNG_INTEL_SSE_OPT` and compile the two SSE2 sources. `shared.json` links zlib
+through `pkg_config`; consumers of the static archive must link zlib and libm.
+`before_build` uses the upstream prebuilt config header and generates the ELF
+version script with the C preprocessor and AWK; the libpng targets need no CMake.
+
+```bash
+cd demos/libpng
+antel fetch-ref -f static
+python3 prepare_icc_fixture.py
+antel rebuild -f static
+antel rebuild -f shared
+ar t png16_static/libpng16.a | wc -l
+readelf -d png16_shared/libpng16.so.16.60.git | grep SONAME
+```
+
+Each library target contains 17 upstream objects. The shared artifact is
+`libpng16.so.16.60.git` with SONAME `libpng16.so.16` and the usual symlinks. The
+first build requires Git, Python 3, a C compiler, AWK, pkg-config, network access,
+and zlib development files. `before_build` generates the config header and ELF
+version script; Antel compiles the library targets.
+
+Upstream CMake also registers six test executables and two tools. They have
+separate Antel configs: `pngtest.json`, `pnggetset.json`, `pngvalid.json`,
+`pngstest.json`, `pngunknown.json`, `pngimage.json`, `pngfix.json`, and
+`png-fix-itxt.json`. Each links the shared target above:
+
+```bash
+for target in pngtest pnggetset pngvalid pngstest pngunknown pngimage pngfix png-fix-itxt; do
+    antel rebuild -f "$target"
+done
+```
+
+Representative runs use test inputs shipped in the fetched upstream tree:
+
+```bash
+./pngtest_pngtest/pngtest pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
+./pnggetset_pnggetset/pnggetset
+./pngvalid_pngvalid/pngvalid --gamma-16-to-8
+./pngunknown_pngunknown/pngunknown --strict default=discard pngunknown_pngunknown/testdata/pngtest.png
+./pngimage_pngimage/pngimage --list-combos --log pngimage_pngimage/testdata/pngsuite/basn0g08.png
+./pngstest_pngstest/pngstest --log --tmpfile /tmp/ps- pngstest_pngstest/testdata/testpngs/gray-1.png
+./pngfix_pngfix/pngfix --quiet pngfix_pngfix/testdata/pngtest.png
+./png-fix-itxt_png-fix-itxt/png-fix-itxt < png-fix-itxt_png-fix-itxt/testdata/pngtest.png > /tmp/png-fixed.png
+```
+
+Four additional programs from `contrib/examples/` also have configs:
+`example-iccfrompng`, `example-pngpixel`, `example-pngtopng`, and
+`example-simpleover`.
+
+```bash
+for target in example-iccfrompng example-pngpixel example-pngtopng example-simpleover; do
+    antel rebuild -f "$target"
+done
+./iccfrompng_example-iccfrompng/iccfrompng iccfrompng_example-iccfrompng/testdata/icc-profile.png
+./pngpixel_example-pngpixel/pngpixel 0 0 pngpixel_example-pngpixel/testdata/pngtest.png
+./pngtopng_example-pngtopng/pngtopng pngtopng_example-pngtopng/testdata/pngtest.png /tmp/pngtopng.png
+./simpleover_example-simpleover/simpleover simpleover_example-simpleover/testdata/background.png /tmp/simpleover.png
+```
+
+## yaml-cpp: C++ YAML library (`ref`)
+
+Location: `demos/yaml-cpp/`. The demo fetches yaml-cpp `master` and compiles the
+upstream core and contrib sources as a C++11 static library, without a local
+consumer.
+
+```bash
+cd demos/yaml-cpp
+antel rebuild
+ar t yaml-cpp_antel/libyaml-cpp.a | wc -l
+```
+
+The first build requires Git and network access.
+
+## json-c: JSON library (`ref` and CMake configure)
+
+Location: `demos/json-c/`. json-c needs platform-probed generated headers. CMake
+is used for configuration only; Antel compiles the 14 production C files into a
+static archive. No CMake build is run.
+
+```bash
+cd demos/json-c
+antel fetch-ref
+cmake -S .antel/refs/json-c -B build/json-c-config \
+    -DBUILD_TESTING=OFF -DBUILD_APPS=OFF \
+    -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON \
+    -DDISABLE_EXTRA_LIBS=ON
+antel rebuild
+ar t json-c_antel/libjson-c.a | wc -l
+```
+
+The archive includes JSON Pointer and JSON Patch support.
+
+## libuv: Linux event loop (`ref`)
+
+Location: `demos/libuv/`. This demo fetches libuv `v1.x` and explicitly selects
+the Linux/POSIX sources from the upstream CMake target, excluding Windows and
+macOS implementations and producing a static archive without a local consumer.
+
+```bash
+cd demos/libuv
+antel rebuild
+ar t uv_antel/libuv.a | wc -l
+```
+
+This demo targets Linux; consumers must link pthread, dl, and rt.
+
+## libgit2: large Git library (`ref` and generated config)
+
+Location: `demos/libgit2/`. After `ref` fetches upstream, CMake configure selects
+the platform sources and generates feature headers plus a compile database.
+`prepare_antelope.py` turns that database into an Antel config; Antel then
+compiles the 196 upstream sources into a static archive.
+
+```bash
+cd demos/libgit2
+antel fetch-ref -f refs
+cmake -S .antel/refs/libgit2 -B build/libgit2-config \
+    -DBUILD_TESTS=OFF -DBUILD_CLI=OFF -DBUILD_EXAMPLES=OFF \
+    -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+python3 prepare_antelope.py
+antel rebuild -f generated
+ar t git2_generated/libgit2.a | wc -l
+```
+
+CMake only configures; it does not compile. The archive uses system OpenSSL,
+PCRE, and zlib; consumers also need these development packages when linking.
+
 ## antelstats: shared library & consumer
 
 Location: `demos/antelstats/`. A small statistics tool: the shared library `libantelstats` provides mean/stddev/median helpers, and the executable calls them to print a report. **Only two config files** — the library's production shape and the executable's consumer shape — nothing fancy; sample data is baked into `main.c`, so running needs no external input.

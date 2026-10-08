@@ -17,6 +17,8 @@ test/hello*_*
 cdemo_antel_std11
 # 多配置输出的输出目录（<项目名>_<配置文件名>/，与 *_antel/ 同构）
 *_app/
+*_shared/
 *_cov/
 *_san/
 *_lib/
+demos/libpng/png16_static

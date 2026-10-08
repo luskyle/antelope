@@ -1,0 +1,11 @@
+build/
+assets/icc-profile.png
+*_pngtest/
+*_pnggetset/
+*_pngvalid/
+*_pngstest/
+*_pngunknown/
+*_pngimage/
+*_pngfix/
+*_png-fix-itxt/
+*_example-*/
