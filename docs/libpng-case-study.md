@@ -186,6 +186,6 @@ done
 ./.antel/build/pngvalid_pngvalid/pngvalid --gamma-16-to-8
 ```
 
-图片、ICC fixture 和各个程序的输入要求见[示例说明](examples.md#libpngstaticshared-ref)
+图片、ICC fixture 和各个程序的输入要求见[示例说明](examples.md#case-libpng)
 及仓库中的 demo README。这个案例展示的是 Antelope 对真实库的构建、生成文件、依赖、
 应用和分发流程的组织能力，而不是用一个最小 hello world 替代完整库项目。

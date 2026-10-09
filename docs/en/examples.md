@@ -1,8 +1,8 @@
 # Examples & Screenshots
 
-The example projects shipped with the repository live under `demos/` — all of them build and run for real. Below, each screenshot has its exact config next to it, so you can copy and reproduce.
+The example projects shipped with the repository live under `demos/` — all of them build and run for real. Below, each screenshot has its exact config next to it, so you can copy and reproduce. Configs are not limited to the name `antel.json`: `antel init` creates that file by default, and `-f` selects another JSON config. Upstream projects commonly use multiple configs for their libraries, tools, and tests. See the [success-case index](success-cases.md) for more projects.
 
-## gtkcalc: GTK calculator (`pkg_config` integration)
+## gtkcalc: GTK calculator (`pkg_config` integration) { #case-gtkcalc }
 
 Location: `demos/gtkcalc/`. A calculator written with libadwaita (GTK 4), demonstrating the most common GUI project shape: **GUI + external library**. It never hand-writes `-I`/`-l` — everything comes from `pkg_config`.
 
@@ -58,7 +58,7 @@ Location: `demos/gtkcalc/`. A calculator written with libadwaita (GTK 4), demons
     2. Content must be set with `adw_application_window_set_content`; `gtk_window_set_child` is equally rejected;
     3. `g_application_run` parses and rejects unknown command-line options, so custom arguments (like `--auto-close`) must be stripped from argv first.
 
-## resdemo: resource packaging (`data_files` / `gresource` / `embed`)
+## resdemo: resource packaging (`data_files` / `gresource` / `embed`) { #case-resdemo }
 
 Location: `demos/resdemo/`. One program carries resources in all three forms, and the UI itself is resource-driven — a complete tour of the distribution options:
 
@@ -182,7 +182,7 @@ Every stage of a build lands an auditable artifact, and `antel analyze` folds th
 !!! note "Why incremental can be trusted"
     `glib-compile-resources` emits **byte-identical output** for identical input (verified), so the gresource source can safely join antel's hash baseline; `ld -r -b binary` symbol naming follows a deterministic rule: `assets/payload.bin` → `_binary_assets_payload_bin_start/_end/_size` (every non-alphanumeric character becomes `_`). Both rules are explicit contracts in DESIGN.md and the tests.
 
-## libyaml: public upstream project (`ref`)
+## libyaml: public upstream project (`ref`) { #case-libyaml }
 
 Location: `demos/libyaml/`. This demo uses `ref` to fetch the public libyaml
 `release/0.2.5` branch, then compiles its eight C translation units with
@@ -201,7 +201,7 @@ The upstream source is cached under `.antel/refs/libyaml`, and the static librar
 is written to `.antel/build/yaml_antel/libyaml.a`. `antel clean` preserves the reference
 checkout.
 
-## cJSON: public JSON library (`ref`)
+## cJSON: public JSON library (`ref`) { #case-cjson }
 
 Location: `demos/cjson/`. This demo fetches the public cJSON `master` branch
 through `ref` and builds separate static/shared parser and JSON Utils libraries,
@@ -233,7 +233,7 @@ test or fuzzing suite. See
 [`demos/cjson/README.md`](https://github.com/luskyle/antelope/blob/main/demos/cjson/README.md)
 for the target list and version notes.
 
-## libpng: static/shared targets (`ref`)
+## libpng: static/shared targets (`ref`) { #case-libpng }
 
 Location: `demos/libpng/`. This mirrors upstream CMake's default
 `PNG_STATIC=ON` and `PNG_SHARED=ON` with `static.json` and `shared.json`. On
@@ -300,7 +300,7 @@ done
 ./.antel/build/simpleover_example-simpleover/simpleover .antel/build/simpleover_example-simpleover/testdata/background.png /tmp/simpleover.png
 ```
 
-## yaml-cpp: C++ YAML library (`ref`)
+## yaml-cpp: C++ YAML library (`ref`) { #case-yaml-cpp }
 
 Location: `demos/yaml-cpp/`. The demo fetches yaml-cpp `master` and compiles the
 upstream core and contrib sources as a C++11 static library, without a local
@@ -314,7 +314,7 @@ ar t .antel/build/yaml-cpp_antel/libyaml-cpp.a | wc -l
 
 The first build requires Git and network access.
 
-## json-c: library, CLI and test targets (`ref` and Python feature probes)
+## json-c: library, CLI and test targets (`ref` and Python feature probes) { #case-json-c }
 
 Location: `demos/json-c/`. json-c needs platform-probed generated headers. Each
 Antel configuration uses `before_build` to invoke `prepare_json_c.py`; the
@@ -343,7 +343,7 @@ are deployed with `data_files`. See
 [`demos/json-c/README.md`](https://github.com/luskyle/antelope/blob/main/demos/json-c/README.md)
 for all targets.
 
-## libuv: Linux event loop (`ref`)
+## libuv: Linux event loop (`ref`) { #case-libuv }
 
 Location: `demos/libuv/`. Upstream's default targets include shared `uv` and
 static `uv_a` libraries; with tests enabled it also defines shared/static test
@@ -367,7 +367,7 @@ Outputs include `.antel/build/uv_antel/libuv.a`, versioned shared library
 The test config includes all 185 upstream test sources applicable to Linux.
 Consumers of the static archive need pthread, dl, and rt.
 
-## libgit2: large Git library (`ref` and Python-generated config)
+## libgit2: large Git library (`ref` and Python-generated config) { #case-libgit2 }
 
 Location: `demos/libgit2/`. `prepare_antelope.py` selects Linux sources,
 generates the feature header and target configs, and Antel builds the upstream
@@ -404,7 +404,7 @@ target configs declare the same `ref`, with the initial ref defined in
 [`demos/libgit2/README.md`](https://github.com/luskyle/antelope/blob/main/demos/libgit2/README.md)
 for the full target details.
 
-## antelstats: shared library & consumer
+## antelstats: shared library & consumer { #case-antelstats }
 
 Location: `demos/antelstats/`. A small statistics tool: the shared library `libantelstats` provides mean/stddev/median helpers, and the executable calls them to print a report. **Only two config files** — the library's production shape and the executable's consumer shape — nothing fancy; sample data is baked into `main.c`, so running needs no external input.
 

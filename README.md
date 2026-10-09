@@ -11,7 +11,7 @@
   <img src="docs/images/logo.png" alt="Antelope" width="180">
 </picture>
 
-小巧敏捷的 C/C++ 编译链接工具。读一个 `antel.json`，把项目编成静态库、共享库或可执行程序；不生成 makefile，也不引入额外的构建语言。
+小巧敏捷的 C/C++ 编译链接工具。用一份或多份 JSON 配置描述构建目标，把项目编成静态库、共享库或可执行程序；不生成 makefile，也不引入额外的构建语言。
 
 > 当我刚开始用 c/c++ 做项目时，我花了很大的精力去掌握 cmake、make、gcc，又花了很大的精力终于理清他们之间的关系。终于后来，我可以熟练使用它们构建我的项目了。虽然有 meson 可以避免写 cmake、但是实际上并没有减轻我的配置负担。我是来开发程序的，然而我还要花大量精力去处理与代码本身无关的事情。每次一想起要写 c/c++ 项目，我都很难受。
 >
@@ -23,7 +23,7 @@
 
 ## 特性
 
-- **配置即构建脚本**：编译参数、链接参数、目标类型、编译器类型都写在 `antel.json` 里，可以随源码一起提交与评审
+- **配置即构建脚本**：每份 JSON 配置描述一个构建目标；`antel init` 默认生成 `antel.json`，也可用 `-f` 指定其他配置文件，分别构建库、工具或测试
 - **并行编译**：默认按 CPU 并行编译各编译单元（`jobs` 可调），并优先用 make 工具执行（`backend: auto`，没有 make 时自动回退内置执行器；仍由 antel 决定编什么）；同时输出 `compile_commands.json` 供 clangd 等工具使用
 - **基于依赖的增量构建**：每个编译单元都记录 `-MMD` 依赖，改头文件只重编受影响的源文件，目标文件或依赖文件缺失时自动补编
 - **诊断聚合**：并行编译输出按单元捕获——成功只汇总警告数，失败按文件分组整块回放并计数，不被并发刷屏淹没
@@ -52,6 +52,8 @@ antel build      # 只编发生变化的部分
 antel run        # 运行生成的可执行程序
 antel analyze    # 生成可视化分析报告 report.html
 ```
+
+`antel init` 默认创建 `antel.json`。除 `init` 外的命令都可用 `-f <文件>` 选择其他配置；项目可保留多份 JSON 配置，为不同目标复用同一套源码。
 
 ## 命令
 
@@ -86,13 +88,14 @@ antel analyze    # 生成可视化分析报告 report.html
 | [快速开始](https://luskyle.github.io/antelope/quick-start/)       | 安装、init、最小配置、构建与运行                                                    |
 | [配置参考](https://luskyle.github.io/antelope/configuration/)     | antel.json 全部字段（含 pkg_config / data_files / gresource / embed）与构建目录布局 |
 | [示例与效果图](https://luskyle.github.io/antelope/examples/)      | GTK 计算器、资源打包演示的完整配置与运行效果                                        |
+| [成功案例](https://luskyle.github.io/antelope/success-cases/)     | 多个公开项目的构建结果、目标说明与配置入口                                          |
 | [报告示例](https://luskyle.github.io/antelope/report/)            | 可视化报告完整效果（resdemo 实例嵌入）与十个区块逐项讲解                            |
 | [命令参考](https://luskyle.github.io/antelope/commands/)          | 各命令的参数、行为与退出码                                                          |
 | [增量构建](https://luskyle.github.io/antelope/incremental-build/) | 什么时候重编，hash 基线与依赖文件如何工作                                           |
 | [编译器支持](https://luskyle.github.io/antelope/compilers/)       | gxx / llvm / msvc 与目标类型的支持细节                                              |
 | [开发与发布](https://luskyle.github.io/antelope/development/)     | 测试、打包、发版流程与工作流                                                        |
 
-自带示例（`demos/` 下）：`helloworld`、`cdemo`、`gtkcalc`、`resdemo`、`antelstats`，以及通过 `ref` 获取并由 Antel 编译的公开库：`libyaml`、`cjson`、`libpng`、`yaml-cpp`、`json-c`、`libuv`、`libgit2`。libpng 演示 static/shared 双目标；json-c、libgit2 和 libpng 另用 CMake 生成配置头，不调用 CMake build。
+自带示例（`demos/` 下）：`helloworld`、`cdemo`、`gtkcalc`、`resdemo`、`antelstats`，以及通过 `ref` 获取并由 Antel 编译的公开项目：`libyaml`、`cjson`、`libpng`、`yaml-cpp`、`json-c`、`libuv`、`libgit2`。成功案例总览列出了各项目已验证的目标及对应配置。公开项目的构建配置不依赖 CMake 生成配置头或执行构建。
 
 ## 开发
 

@@ -11,19 +11,19 @@
   <img src="docs/images/logo.png" alt="Antelope" width="180">
 </picture>
 
-*A small and nimble C/C++ build tool. Point it at an `antel.json` and it turns your project into a static library, shared library, or executable — no Makefile to maintain, no extra build language to learn.*
+*A small and nimble C/C++ build tool. Describe build targets in one or more JSON configs to produce static libraries, shared libraries, or executables — no Makefile to maintain, no extra build language to learn.*
 
 > When I first started working with C/C++, I poured a lot of effort into mastering cmake, make, and gcc — and even more into finally sorting out how they relate to each other. In time I could use them fluently to build my projects. Meson avoided writing cmake, sure, but it didn't actually lighten the configuration burden. I'm here to write programs, yet I kept spending serious energy on things that have nothing to do with the code itself. Every time I thought about starting a C/C++ project, it hurt.
 >
 > Why should it be this hard? Why can't compiling a C/C++ project be as simple as writing a JSON file? That's how Antelope was born. Around 2022, Antelope already had a working prototype — but many features were still missing, and life kept getting in the way, so I couldn't find the time to finish it properly. As coding agents grew more powerful, I finally broke free from the heavy "old-school programming." With an agent's help, my ideas got built in no time.
 >
-> By writing a single JSON file, you can say goodbye to cmake. Stop worrying about the complicated build backend — leave it to Antelope. Beyond compiling and linking, it generates a visual project analysis report from 10 different angles, so you truly understand what your project produces.
+> By describing your build in JSON, you can say goodbye to cmake. Stop worrying about the complicated build backend — leave it to Antelope. Beyond compiling and linking, it generates a visual project analysis report from 10 different angles, so you truly understand what your project produces.
 >
 > — Author: luskyle
 
 ## Features
 
-- **Configuration is the build script**: compiler flags, linker flags, target type and toolchain are all declared in `antel.json`, committed and reviewed alongside the source code
+- **Configuration is the build script**: each JSON config describes a build target; `antel init` creates `antel.json` by default, and `-f` selects other config files for separate libraries, tools or tests
 - **Parallel builds**: compile units are built in parallel by default (`jobs` is tunable), preferring the `make` tool as the executor (`backend: auto`, falling back to the built-in executor when `make` is missing — antel still decides *what* to compile); `compile_commands.json` is emitted for clangd and friends
 - **Dependency-based incremental builds**: every compile unit records `-MMD` dependencies, so a header change rebuilds only the affected sources; missing objects or dep files are rebuilt automatically
 - **Aggregated diagnostics**: parallel compile output is captured per unit — success prints just a warning count, failure replays each file's diagnostics grouped and counted instead of being drowned in interleaved output
@@ -52,6 +52,8 @@ antel build      # build only what changed
 antel run        # run the produced executable
 antel analyze    # generate report.html visual analysis
 ```
+
+`antel init` creates `antel.json` by default. All commands except `init` accept `-f <file>` to select another config; a project can keep multiple JSON configs to build different targets from the same source tree.
 
 ## Commands
 
@@ -86,13 +88,14 @@ Full documentation lives at [https://luskyle.github.io/antelope/](https://luskyl
 | [Quick Start](https://luskyle.github.io/antelope/en/quick-start/)      | install, init, minimal config, build & run                                  |
 | [Configuration](https://luskyle.github.io/antelope/en/configuration/)  | every antel.json field (incl. pkg_config / data_files / gresource / embed)  |
 | [Examples](https://luskyle.github.io/antelope/en/examples/)            | full configs and running results of the demos                               |
+| [Success Cases](https://luskyle.github.io/antelope/en/success-cases/)   | verified targets and config entry points for upstream projects               |
 | [Report Example](https://luskyle.github.io/antelope/en/report/)        | the visual report in full (resdemo instance embedded) plus per-block walkthrough |
 | [Commands](https://luskyle.github.io/antelope/en/commands/)            | command parameters, behavior and exit codes                                 |
 | [Incremental Build](https://luskyle.github.io/antelope/en/incremental-build/) | when things rebuild, how the hash baseline and dep files work        |
 | [Compilers](https://luskyle.github.io/antelope/en/compilers/)          | gxx / llvm / msvc support and target types                                  |
 | [Development](https://luskyle.github.io/antelope/en/development/)      | testing, packaging, release flow and workflows                               |
 
-Built-in examples under `demos/`: `helloworld`, `cdemo`, `gtkcalc`, `resdemo`, `antelstats`, plus public `libyaml`, `cJSON`, `libpng`, `yaml-cpp`, `json-c`, `libuv`, and `libgit2` projects fetched through `ref` and compiled with antel. The libpng demo builds both static and shared targets; json-c, libgit2, and libpng use CMake to generate configuration headers but do not run CMake build.
+Built-in examples under `demos/`: `helloworld`, `cdemo`, `gtkcalc`, `resdemo`, `antelstats`, plus public `libyaml`, `cJSON`, `libpng`, `yaml-cpp`, `json-c`, `libuv`, and `libgit2` projects fetched through `ref` and built by antel. The success-case index lists verified targets and config entry points. The public project configs do not use CMake to generate configuration headers or run builds.
 
 ## Development
 

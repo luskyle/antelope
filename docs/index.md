@@ -4,7 +4,7 @@
 
 # Antelope
 
-<p class="hero-tagline">小巧敏捷的 C/C++ 编译链接工具。读一个 <code>antel.json</code>，把项目编成静态库、共享库或可执行程序——不生成 makefile，也不引入额外的构建语言。</p>
+<p class="hero-tagline">小巧敏捷的 C/C++ 编译链接工具。用一份或多份 JSON 配置描述构建目标，生成静态库、共享库或可执行程序——无需手写构建脚本。</p>
 
 <div class="hero-actions">
 <a href="quick-start/" class="md-button md-button--primary">快速开始</a>
@@ -19,7 +19,7 @@
 
     ---
 
-    编译参数、链接参数、目标类型、编译器类型都写在 `antel.json` 里，构建方式与配置一一对应，可以随源码一起提交、一起评审。
+    每个 JSON 配置描述一个构建目标；`antel.json` 是默认文件名，也可以用多份配置分别构建库、工具和测试，并随源码一起提交、评审。
 
     [:octicons-arrow-right-24: 配置参考](configuration.md)
 
@@ -91,6 +91,7 @@ antel run                     # 运行生成的可执行程序
 | 先跑通一个最小项目           | [快速开始](quick-start.md)            |
 | 搞清楚 antel.json 的每个字段 | [配置参考](configuration.md)          |
 | 看完整工程的配置与运行效果   | [示例与效果图](examples.md)           |
+| 浏览已验证的公开项目构建案例 | [成功案例](success-cases.md)          |
 | 查命令的参数与退出码         | [命令参考](commands.md)               |
 | 理解什么时候会重新编译       | [增量构建](incremental-build.md)      |
 | 换编译器或换目标类型         | [编译器支持](compilers.md)            |

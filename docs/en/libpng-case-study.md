@@ -195,7 +195,7 @@ done
 ./.antel/build/pngvalid_pngvalid/pngvalid --gamma-16-to-8
 ```
 
-See [Examples](examples.md#libpng-staticshared-targets-ref) and the demo README for
+See [Examples](examples.md#case-libpng) and the demo README for
 the input files each program expects. The case demonstrates an actual library's
 source, generated files, dependencies, applications, and distribution workflow,
 not a replacement library built around a minimal hello-world consumer.

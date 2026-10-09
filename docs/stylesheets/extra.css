@@ -44,21 +44,6 @@
   overflow-x: auto;
 }
 
-/* logo：浅色底与深色底各一版。
-   头部（导航栏底色最深）按主题切换，尺寸与主题里的 .md-logo img 保持一致 */
-[data-md-color-scheme="slate"] .md-header__button.md-logo img {
-  display: none;
-}
-
-[data-md-color-scheme="slate"] .md-header__button.md-logo {
-  background-image: url("../images/logo-dark.svg");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  width: 1.2rem;
-  height: 1.2rem;
-}
-
 /* 首页 hero：跟随主题开关切换，不用 prefers-color-scheme，避免手动切换主题时对不上 */
 .hero-logo--dark {
   display: none;
@@ -80,6 +65,9 @@
   --antelope-surface: #0e1319;
   --antelope-surface-2: #151c25;
   --antelope-line: rgba(148, 163, 184, 0.22);
+  --antelope-header-bg: rgba(9, 13, 18, 0.96);
+  --antelope-header-fg: rgba(226, 236, 245, 0.92);
+  --antelope-header-control-bg: rgba(148, 163, 184, 0.14);
 }
 
 /* 深色（默认配色）：冷调深底 + 青色点缀，代码块比页面底稍亮一层 */
@@ -109,17 +97,35 @@
 [data-md-color-scheme="default"] {
   --md-typeset-a-color: #0f766e;
   --antelope-line: rgba(15, 23, 42, 0.12);
+  --antelope-header-bg: #fff;
+  --antelope-header-fg: rgba(15, 23, 42, 0.9);
+  --antelope-header-control-bg: rgba(15, 23, 42, 0.07);
 }
 
-/* 顶栏与标签栏：半透 + 毛玻璃 */
+/* Keep the logo in Material's normal layout; theme colors follow the palette. */
 .md-header {
-  background-color: rgba(9, 13, 18, 0.72);
+  background-color: var(--antelope-header-bg);
+  color: var(--antelope-header-fg);
   backdrop-filter: blur(10px) saturate(140%);
   border-bottom: 1px solid var(--antelope-line);
 }
 
 .md-tabs {
-  background-color: transparent;
+  background-color: var(--antelope-header-bg);
+  color: var(--antelope-header-fg);
+}
+
+.md-header__button,
+.md-header__topic,
+.md-header__title,
+.md-search__icon,
+.md-search__input,
+.md-tabs__link {
+  color: var(--antelope-header-fg);
+}
+
+.md-search__form {
+  background-color: var(--antelope-header-control-bg);
 }
 
 /* 标题：等宽字体，二级标题带青色标记条 */

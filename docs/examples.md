@@ -1,8 +1,8 @@
 # 示例与效果图
 
-仓库自带的示例工程都在 `demos/` 下，都是真实可构建、可运行的项目。下面的效果图与配置一一对应，照抄即可复现。
+仓库自带的示例工程都在 `demos/` 下，都是真实可构建、可运行的项目。下面的效果图与配置一一对应，照抄即可复现。配置文件名不限定为 `antel.json`：`antel init` 默认生成该文件，命令也可用 `-f` 选择其他 JSON 配置；公开项目通常用多份配置分别声明库、工具和测试目标。更多项目见[成功案例总览](success-cases.md)。
 
-## gtkcalc：GTK 计算器（`pkg_config` 集成）
+## gtkcalc：GTK 计算器（`pkg_config` 集成） { #case-gtkcalc }
 
 位置：`demos/gtkcalc/`。一个用 libadwaita（GTK 4）写的计算器，演示最常见的图形项目形态：**GUI + 外部库**。它不手写任何 `-I`/`-l`，全靠 `pkg_config` 注入。
 
@@ -58,7 +58,7 @@
     2. 内容必须用 `adw_application_window_set_content` 设置，`gtk_window_set_child` 同样被拒绝；
     3. `g_application_run` 会解析并拒绝未知命令行选项，自定义参数（如 `--auto-close`）要先从 argv 里剥掉。
 
-## resdemo：运行资源打包（`data_files` / `gresource` / `embed`）
+## resdemo：运行资源打包（`data_files` / `gresource` / `embed`） { #case-resdemo }
 
 位置：`demos/resdemo/`。一个程序同时用三种形态携带资源，界面本身也由资源驱动，用来演示完整的资源分发方案：
 
@@ -182,7 +182,7 @@ antel rebuild
 !!! note "为什么能放心走增量"
     `glib-compile-resources` 对同样的输入生成**逐字节相同**的输出（已实测），因此 gresource 源可以安全进入 antel 的 hash 基线；`ld -r -b binary` 的符号命名是确定的规则：`assets/payload.bin` → `_binary_assets_payload_bin_start/_end/_size`（路径里非字母数字字符全部换成下划线）。这两条是设计文档（DESIGN.md）与测试里明确的契约。
 
-## libyaml：公开上游项目（ref）
+## libyaml：公开上游项目（ref） { #case-libyaml }
 
 位置：`demos/libyaml/`。这个示例通过 `ref` 获取公开的 libyaml `release/0.2.5`
 分支，并由 Antelope 编译 8 个 C 源文件。配置显式列出源文件和头文件路径；原先由
@@ -198,7 +198,7 @@ antel rebuild
 上游源码缓存在 `.antel/refs/libyaml`，静态库位于 `.antel/build/yaml_antel/libyaml.a`。引用缓存
 不会被 `antel clean` 删除。
 
-## cJSON：公开 JSON 库（ref）
+## cJSON：公开 JSON 库（ref） { #case-cjson }
 
 位置：`demos/cjson/`。示例通过 `ref` 获取 cJSON 的公开 `master` 分支，由 Antel 将
 核心解析器和 JSON Utils 分别编译成静态/共享库，并构建上游 Unity 库、`cJSON_test`、
@@ -225,7 +225,7 @@ ar t .antel/build/cjson_antel/libcjson.a
 配置依赖按上述顺序构建；完整目标清单和版本说明见
 [`demos/cjson/README.md`](https://github.com/luskyle/antelope/blob/main/demos/cjson/README.md)。
 
-## libpng：static/shared 双目标（ref）
+## libpng：static/shared 双目标（ref） { #case-libpng }
 
 位置：`demos/libpng/`。对应上游 CMake 默认的 `PNG_STATIC=ON` 和 `PNG_SHARED=ON`，
 分别由 `static.json`、`shared.json` 构建静态库和版本化共享库。
@@ -295,7 +295,7 @@ done
 ./.antel/build/simpleover_example-simpleover/simpleover .antel/build/simpleover_example-simpleover/testdata/background.png /tmp/simpleover.png
 ```
 
-## yaml-cpp：C++ YAML 库（ref）
+## yaml-cpp：C++ YAML 库（ref） { #case-yaml-cpp }
 
 位置：`demos/yaml-cpp/`。通过 `ref` 获取 yaml-cpp `master`，用 C++11 将上游核心及
 contrib 源文件编译成静态库，不添加本地 consumer。
@@ -308,7 +308,7 @@ ar t .antel/build/yaml-cpp_antel/libyaml-cpp.a | wc -l
 
 首次构建需要 Git 和网络。
 
-## json-c：库、命令行工具和测试目标（ref + Python 配置探测）
+## json-c：库、命令行工具和测试目标（ref + Python 配置探测） { #case-json-c }
 
 位置：`demos/json-c/`。json-c 需要平台探测生成的头文件；各 Antel 配置通过
 `before_build` 自动调用 `prepare_json_c.py`，由该脚本使用 C 编译器探测平台并直接生成
@@ -334,7 +334,7 @@ TEST_PARSE_CHUNKSIZE=7 ./.antel/build/test_parse_test-parse/test_parse
 JSON Patch fixtures 通过 `data_files` 部署。完整清单见
 [`demos/json-c/README.md`](https://github.com/luskyle/antelope/blob/main/demos/json-c/README.md)。
 
-## libuv：Linux 事件循环（ref）
+## libuv：Linux 事件循环（ref） { #case-libuv }
 
 位置：`demos/libuv/`。上游默认提供共享库 `uv` 和静态库 `uv_a`；启用测试时还会定义
 共享/静态测试运行器和静态 benchmark runner。`prepare_libuv.py` 根据 ref 中的 Linux
@@ -355,7 +355,7 @@ antel rebuild -f benchmarks
 `.antel/build/uv_shared/libuv.so.1.0.0`、两个测试运行器和 benchmark runner。测试配置包含
 185 个 Linux 上游测试源文件；consumer 链接静态库需 pthread、dl 和 rt。
 
-## libgit2：大型 Git 库（ref + Python 配置生成）
+## libgit2：大型 Git 库（ref + Python 配置生成） { #case-libgit2 }
 
 位置：`demos/libgit2/`。`prepare_antelope.py` 直接选择 Linux 源文件、生成 feature header
 和目标配置，由 Antel 构建上游静态库、版本化共享库、CLI、`lg2` 示例和两个测试运行器。
@@ -388,7 +388,7 @@ zlib 开发包和 pthread。所有目标配置都声明同一个 `ref`，初始 
 `generated.json`，不需要单独的 `refs.json`。更多目标细节见
 [`demos/libgit2/README.md`](https://github.com/luskyle/antelope/blob/main/demos/libgit2/README.md)。
 
-## antelstats：共享库与消费者
+## antelstats：共享库与消费者 { #case-antelstats }
 
 位置：`demos/antelstats/`。一个统计分析小工具：共享库 `libantelstats` 提供均值/标准差/中位数等统计函数，可执行程序调用它打印报表。**只用了两个配置文件**——库的生产形态与可执行程序的消费形态——没有其他花活；示例数据直接写死在 `main.c` 里，运行不需要任何外部文件。
 

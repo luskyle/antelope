@@ -4,7 +4,7 @@
 
 # Antelope
 
-<p class="hero-tagline">A small, nimble C/C++ compile-and-link tool. Read one <code>antel.json</code> and it builds your project into a static library, a shared library, or an executable — no makefiles, no extra build language.</p>
+<p class="hero-tagline">A small, nimble C/C++ compile-and-link tool. Describe build targets in one or more JSON configs and produce static libraries, shared libraries, or executables — without hand-maintaining build scripts.</p>
 
 <div class="hero-actions">
 <a href="quick-start/" class="md-button md-button--primary">Get Started</a>
@@ -19,7 +19,7 @@
 
     ---
 
-    Compile arguments, link arguments, target type, and compiler type all live in `antel.json`. The build mirrors the configuration one-to-one, so it can be committed alongside your source and reviewed together.
+    Each JSON config describes a build target. `antel.json` is the default filename; use multiple configs for libraries, tools, and tests, and commit them alongside the source for review.
 
     [:octicons-arrow-right-24: Configuration](configuration.md)
 
@@ -91,6 +91,7 @@ Compilers supported are `gxx` (gcc/g++), `llvm` (clang), and `msvc` (cl); linkin
 | Get a minimal project up and running         | [Quick Start](quick-start.md)         |
 | Understand every field of antel.json         | [Configuration](configuration.md)     |
 | See complete projects configured and running | [Examples](examples.md)               |
+| Browse verified upstream project builds       | [Success Cases](success-cases.md)      |
 | Look up command flags and exit codes         | [Commands](commands.md)               |
 | Understand when a rebuild happens            | [Incremental Build](incremental-build.md) |
 | Switch compilers or target types             | [Compiler Support](compilers.md)      |
