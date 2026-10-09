@@ -345,38 +345,64 @@ for all targets.
 
 ## libuv: Linux event loop (`ref`)
 
-Location: `demos/libuv/`. This demo fetches libuv `v1.x` and explicitly selects
-the Linux/POSIX sources from the upstream CMake target, excluding Windows and
-macOS implementations and producing a static archive without a local consumer.
+Location: `demos/libuv/`. Upstream's default targets include shared `uv` and
+static `uv_a` libraries; with tests enabled it also defines shared/static test
+runners and a static benchmark runner. `prepare_libuv.py` selects Linux source
+files and writes Antel configs; Antel handles compilation without invoking
+CMake.
 
 ```bash
 cd demos/libuv
+antel fetch-ref
+python3 prepare_libuv.py
 antel rebuild
-ar t .antel/build/uv_antel/libuv.a | wc -l
+antel rebuild -f shared
+antel rebuild -f tests-static
+antel rebuild -f tests-shared
+antel rebuild -f benchmarks
 ```
 
-This demo targets Linux; consumers must link pthread, dl, and rt.
+Outputs include `.antel/build/uv_antel/libuv.a`, versioned shared library
+`.antel/build/uv_shared/libuv.so.1.0.0`, two test runners, and a benchmark runner.
+The test config includes all 185 upstream test sources applicable to Linux.
+Consumers of the static archive need pthread, dl, and rt.
 
-## libgit2: large Git library (`ref` and generated config)
+## libgit2: large Git library (`ref` and Python-generated config)
 
-Location: `demos/libgit2/`. After `ref` fetches upstream, CMake configure selects
-the platform sources and generates feature headers plus a compile database.
-`prepare_antelope.py` turns that database into an Antel config; Antel then
-compiles the 196 upstream sources into a static archive.
+Location: `demos/libgit2/`. `prepare_antelope.py` selects Linux sources,
+generates the feature header and target configs, and Antel builds the upstream
+static/shared libraries, CLI, `lg2` example, and two test runners. The build
+does not invoke CMake; the tests use upstream Clar's Python generator.
 
 ```bash
 cd demos/libgit2
-antel fetch-ref -f refs
-cmake -S .antel/refs/libgit2 -B .antel/build/libgit2-config \
-    -DBUILD_TESTS=OFF -DBUILD_CLI=OFF -DBUILD_EXAMPLES=OFF \
-    -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+antel fetch-ref -f generated
 python3 prepare_antelope.py
-antel rebuild -f generated
+
+antel rebuild -f generated       # static library
+antel rebuild -f shared          # versioned shared library
+antel rebuild -f cli             # git2 CLI
+antel rebuild -f lg2             # upstream example tool
+antel rebuild -f tests-libgit2   # offline libgit2 tests
+antel rebuild -f tests-util      # utility tests
+
 ar t .antel/build/git2_generated/libgit2.a | wc -l
+readelf -d .antel/build/git2_shared/libgit2.so.1.9.0 | grep SONAME
+./.antel/build/git2_cli/git2 version
+ldd .antel/build/lg2_lg2/lg2 | grep libgit2
+(cd .antel/build/libgit2_tests_tests-libgit2 && ./libgit2_tests)
+(cd .antel/build/util_tests_tests-util && ./util_tests -v)
 ```
 
-CMake only configures; it does not compile. The archive uses system OpenSSL,
-PCRE, and zlib; consumers also need these development packages when linking.
+The archive contains 196 objects; the shared library has SONAME
+`libgit2.so.1.9`. `lg2` uses a relative rpath to the shared library, while the
+CLI and test runners link against the Antel-built static archive. The libgit2
+test runner excludes online, stress, and performance tests. The build requires
+Linux, Git, Python 3, OpenSSL/PCRE/zlib development packages, and pthreads. All
+target configs declare the same `ref`, with the initial ref defined in
+`generated.json`; a separate `refs.json` is not needed. See
+[`demos/libgit2/README.md`](https://github.com/luskyle/antelope/blob/main/demos/libgit2/README.md)
+for the full target details.
 
 ## antelstats: shared library & consumer
 

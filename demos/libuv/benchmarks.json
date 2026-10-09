@@ -1,0 +1,59 @@
+{
+    "projectName": "uv_run_benchmarks_a",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/libuv/libuv.git",
+            "branch": "v1.x",
+            "name": "libuv"
+        }
+    ],
+    "source": [
+        ".antel/refs/libuv/test/benchmark-async-pummel.c",
+        ".antel/refs/libuv/test/benchmark-async.c",
+        ".antel/refs/libuv/test/benchmark-fs-stat.c",
+        ".antel/refs/libuv/test/benchmark-getaddrinfo.c",
+        ".antel/refs/libuv/test/benchmark-loop-count.c",
+        ".antel/refs/libuv/test/benchmark-queue-work.c",
+        ".antel/refs/libuv/test/benchmark-million-async.c",
+        ".antel/refs/libuv/test/benchmark-million-timers.c",
+        ".antel/refs/libuv/test/benchmark-multi-accept.c",
+        ".antel/refs/libuv/test/benchmark-ping-pongs.c",
+        ".antel/refs/libuv/test/benchmark-ping-udp.c",
+        ".antel/refs/libuv/test/benchmark-pound.c",
+        ".antel/refs/libuv/test/benchmark-pump.c",
+        ".antel/refs/libuv/test/benchmark-sizes.c",
+        ".antel/refs/libuv/test/benchmark-spawn.c",
+        ".antel/refs/libuv/test/benchmark-tcp-write-batch.c",
+        ".antel/refs/libuv/test/benchmark-thread.c",
+        ".antel/refs/libuv/test/benchmark-udp-pummel.c",
+        ".antel/refs/libuv/test/blackhole-server.c",
+        ".antel/refs/libuv/test/echo-server.c",
+        ".antel/refs/libuv/test/run-benchmarks.c",
+        ".antel/refs/libuv/test/runner.c",
+        ".antel/refs/libuv/test/runner-unix.c"
+    ],
+    "include_directories": [
+        ".antel/refs/libuv/include"
+    ],
+    "compile_args": [
+        "-std=gnu11",
+        "-O2",
+        "-Wall",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_LARGEFILE_SOURCE",
+        "-D_GNU_SOURCE",
+        "-D_POSIX_C_SOURCE=200112",
+        "-I.antel/refs/libuv/src",
+        "-I.antel/refs/libuv/test"
+    ],
+    "link_args": [
+        ".antel/build/uv_antel/libuv.a",
+        "-pthread",
+        "-ldl",
+        "-lrt",
+        "-lm",
+        "-lutil"
+    ]
+}

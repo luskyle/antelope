@@ -1,0 +1,85 @@
+{
+    "projectName": "lg2",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/libgit2/libgit2.git",
+            "branch": "main",
+            "name": "libgit2"
+        }
+    ],
+    "source": [
+        ".antel/refs/libgit2/examples/add.c",
+        ".antel/refs/libgit2/examples/args.c",
+        ".antel/refs/libgit2/examples/blame.c",
+        ".antel/refs/libgit2/examples/cat-file.c",
+        ".antel/refs/libgit2/examples/checkout.c",
+        ".antel/refs/libgit2/examples/clone.c",
+        ".antel/refs/libgit2/examples/commit.c",
+        ".antel/refs/libgit2/examples/common.c",
+        ".antel/refs/libgit2/examples/config.c",
+        ".antel/refs/libgit2/examples/describe.c",
+        ".antel/refs/libgit2/examples/diff.c",
+        ".antel/refs/libgit2/examples/fetch.c",
+        ".antel/refs/libgit2/examples/for-each-ref.c",
+        ".antel/refs/libgit2/examples/general.c",
+        ".antel/refs/libgit2/examples/index-pack.c",
+        ".antel/refs/libgit2/examples/init.c",
+        ".antel/refs/libgit2/examples/lg2.c",
+        ".antel/refs/libgit2/examples/log.c",
+        ".antel/refs/libgit2/examples/ls-files.c",
+        ".antel/refs/libgit2/examples/ls-remote.c",
+        ".antel/refs/libgit2/examples/merge.c",
+        ".antel/refs/libgit2/examples/push.c",
+        ".antel/refs/libgit2/examples/rebase.c",
+        ".antel/refs/libgit2/examples/remote.c",
+        ".antel/refs/libgit2/examples/rev-list.c",
+        ".antel/refs/libgit2/examples/rev-parse.c",
+        ".antel/refs/libgit2/examples/show-index.c",
+        ".antel/refs/libgit2/examples/stash.c",
+        ".antel/refs/libgit2/examples/status.c",
+        ".antel/refs/libgit2/examples/tag.c"
+    ],
+    "include_directories": [],
+    "compile_args": [
+        "-std=c99",
+        "-O2",
+        "-DNDEBUG",
+        "-DGIT_DEPRECATE_HARD=1",
+        "-I.antel/refs/libgit2/src/libgit2",
+        "-I.antel/refs/libgit2/src/util",
+        "-I.antel/refs/libgit2/include",
+        "-I.antel/build/libgit2-generated",
+        "-I.antel/refs/libgit2/deps/llhttp",
+        "-I.antel/refs/libgit2/deps/ntlmclient",
+        "-I.antel/refs/libgit2/deps/reftable",
+        "-I.antel/refs/libgit2/deps/reftable/include",
+        "-I.antel/refs/libgit2/deps/xdiff",
+        "-I.antel/refs/libgit2/examples"
+    ],
+    "link_args": [
+        "-L.antel/build/git2_shared",
+        "-lgit2",
+        "-pthread"
+    ],
+    "pkg_config": [
+        "openssl",
+        "libpcre",
+        "zlib"
+    ],
+    "before_build": [
+        {
+            "command": [
+                "python3",
+                "prepare_antelope.py"
+            ],
+            "outputs": [
+                ".antel/build/libgit2-generated/git2_features.h"
+            ]
+        }
+    ],
+    "rpath": [
+        "$ORIGIN/../git2_shared"
+    ]
+}

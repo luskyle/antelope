@@ -336,36 +336,57 @@ JSON Patch fixtures 通过 `data_files` 部署。完整清单见
 
 ## libuv：Linux 事件循环（ref）
 
-位置：`demos/libuv/`。从 libuv `v1.x` 获取源码，显式选择上游 CMake 对应的 Linux 与
-POSIX 实现，编译成静态库，不包括 Windows/macOS 源文件或本地 consumer。
+位置：`demos/libuv/`。上游默认提供共享库 `uv` 和静态库 `uv_a`；启用测试时还会定义
+共享/静态测试运行器和静态 benchmark runner。`prepare_libuv.py` 根据 ref 中的 Linux
+源文件生成 Antel 配置，实际编译全部由 Antel 完成，不调用 CMake。
 
 ```bash
 cd demos/libuv
+antel fetch-ref
+python3 prepare_libuv.py
 antel rebuild
-ar t .antel/build/uv_antel/libuv.a | wc -l
+antel rebuild -f shared
+antel rebuild -f tests-static
+antel rebuild -f tests-shared
+antel rebuild -f benchmarks
 ```
 
-本 demo 针对 Linux，使用者链接归档时需要 pthread、dl 和 rt。
+产物包括 `.antel/build/uv_antel/libuv.a`、版本化共享库
+`.antel/build/uv_shared/libuv.so.1.0.0`、两个测试运行器和 benchmark runner。测试配置包含
+185 个 Linux 上游测试源文件；consumer 链接静态库需 pthread、dl 和 rt。
 
-## libgit2：大型 Git 库（ref + 配置生成）
+## libgit2：大型 Git 库（ref + Python 配置生成）
 
-位置：`demos/libgit2/`。先通过 `ref` 获取上游，再用 CMake configure 选择当前平台源、
-生成 feature headers 和 compile database；`prepare_antelope.py` 根据数据库生成
-Antel 配置，之后由 Antel 将 196 个上游源文件编译成静态库。
+位置：`demos/libgit2/`。`prepare_antelope.py` 直接选择 Linux 源文件、生成 feature header
+和目标配置，由 Antel 构建上游静态库、版本化共享库、CLI、`lg2` 示例和两个测试运行器。
+整个构建过程不调用 CMake；测试目标使用上游 Clar Python 脚本生成测试清单。
 
 ```bash
 cd demos/libgit2
-antel fetch-ref -f refs
-cmake -S .antel/refs/libgit2 -B .antel/build/libgit2-config \
-    -DBUILD_TESTS=OFF -DBUILD_CLI=OFF -DBUILD_EXAMPLES=OFF \
-    -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+antel fetch-ref -f generated
 python3 prepare_antelope.py
-antel rebuild -f generated
+
+antel rebuild -f generated       # 静态库
+antel rebuild -f shared          # 版本化共享库
+antel rebuild -f cli             # git2 CLI
+antel rebuild -f lg2             # 上游示例程序
+antel rebuild -f tests-libgit2   # 离线 libgit2 测试
+antel rebuild -f tests-util      # util 测试
+
 ar t .antel/build/git2_generated/libgit2.a | wc -l
+readelf -d .antel/build/git2_shared/libgit2.so.1.9.0 | grep SONAME
+./.antel/build/git2_cli/git2 version
+ldd .antel/build/lg2_lg2/lg2 | grep libgit2
+(cd .antel/build/libgit2_tests_tests-libgit2 && ./libgit2_tests)
+(cd .antel/build/util_tests_tests-util && ./util_tests -v)
 ```
 
-此处 CMake 只配置，不编译；静态库依赖系统 OpenSSL、PCRE 和 zlib，最终 consumer
-链接时也需要这些开发包。
+静态库包含 196 个对象，共享库 SONAME 为 `libgit2.so.1.9`；`lg2` 通过相对 rpath
+链接共享库，CLI 和测试运行器链接 Antel 构建的静态库。libgit2 测试运行器排除了
+online、stress、performance 测试。构建需要 Linux、Git、Python 3 及 OpenSSL、PCRE、
+zlib 开发包和 pthread。所有目标配置都声明同一个 `ref`，初始 ref 定义在
+`generated.json`，不需要单独的 `refs.json`。更多目标细节见
+[`demos/libgit2/README.md`](https://github.com/luskyle/antelope/blob/main/demos/libgit2/README.md)。
 
 ## antelstats：共享库与消费者
 

@@ -1,0 +1,78 @@
+{
+    "projectName": "git2",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/libgit2/libgit2.git",
+            "branch": "main",
+            "name": "libgit2"
+        }
+    ],
+    "source": [
+        ".antel/refs/libgit2/src/cli/cmd.c",
+        ".antel/refs/libgit2/src/cli/cmd_blame.c",
+        ".antel/refs/libgit2/src/cli/cmd_cat_file.c",
+        ".antel/refs/libgit2/src/cli/cmd_clone.c",
+        ".antel/refs/libgit2/src/cli/cmd_commit.c",
+        ".antel/refs/libgit2/src/cli/cmd_config.c",
+        ".antel/refs/libgit2/src/cli/cmd_hash_object.c",
+        ".antel/refs/libgit2/src/cli/cmd_help.c",
+        ".antel/refs/libgit2/src/cli/cmd_index_pack.c",
+        ".antel/refs/libgit2/src/cli/cmd_init.c",
+        ".antel/refs/libgit2/src/cli/cmd_version.c",
+        ".antel/refs/libgit2/src/cli/common.c",
+        ".antel/refs/libgit2/src/cli/main.c",
+        ".antel/refs/libgit2/src/cli/opt.c",
+        ".antel/refs/libgit2/src/cli/opt_usage.c",
+        ".antel/refs/libgit2/src/cli/progress.c",
+        ".antel/refs/libgit2/src/cli/unix/sighandler.c"
+    ],
+    "include_directories": [],
+    "compile_args": [
+        "-std=c99",
+        "-O2",
+        "-fvisibility=hidden",
+        "-DNDEBUG",
+        "-DGIT_STATIC_BUILD=1",
+        "-DCRYPT_OPENSSL",
+        "-DNTLM_STATIC=1",
+        "-DOPENSSL_API_COMPAT=0x10100000L",
+        "-DUNICODE_BUILTIN=1",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-DSHA1DC_NO_STANDARD_INCLUDES=1",
+        "-DSHA1DC_CUSTOM_INCLUDE_SHA1_C=\"git2_util.h\"",
+        "-DSHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"git2_util.h\"",
+        "-I.antel/refs/libgit2/src/libgit2",
+        "-I.antel/refs/libgit2/src/util",
+        "-I.antel/refs/libgit2/include",
+        "-I.antel/build/libgit2-generated",
+        "-I.antel/refs/libgit2/deps/llhttp",
+        "-I.antel/refs/libgit2/deps/ntlmclient",
+        "-I.antel/refs/libgit2/deps/reftable",
+        "-I.antel/refs/libgit2/deps/reftable/include",
+        "-I.antel/refs/libgit2/deps/xdiff",
+        "-I.antel/refs/libgit2/src/cli"
+    ],
+    "link_args": [
+        ".antel/build/git2_generated/libgit2.a",
+        "-pthread"
+    ],
+    "pkg_config": [
+        "openssl",
+        "libpcre",
+        "zlib"
+    ],
+    "before_build": [
+        {
+            "command": [
+                "python3",
+                "prepare_antelope.py"
+            ],
+            "outputs": [
+                ".antel/build/libgit2-generated/git2_features.h"
+            ]
+        }
+    ]
+}
