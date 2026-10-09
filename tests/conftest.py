@@ -36,7 +36,7 @@ def write_sources(project_dir):
 
 
 def run_program(project_dir):
-    program = project_dir / 'demo_antel' / 'demo'
+    program = project_dir / '.antel' / 'build' / 'demo_antel' / 'demo'
     assert program.exists(), '未生成可执行程序'
     return subprocess.run([str(program)], capture_output=True, text=True).stdout.strip()
 

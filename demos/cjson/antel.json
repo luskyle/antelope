@@ -10,13 +10,14 @@
         }
     ],
     "source": [
-        ".antel/refs/cjson/cJSON.c",
-        ".antel/refs/cjson/cJSON_Utils.c"
+        ".antel/refs/cjson/cJSON.c"
     ],
     "include_directories": [],
     "compile_args": [
         "-O2",
         "-Wall",
+        "-std=c89",
+        "-DENABLE_LOCALES",
         "-I.antel/refs/cjson"
     ],
     "link_args": []

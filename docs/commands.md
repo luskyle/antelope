@@ -25,7 +25,8 @@ antel rebuild -f gcc
 antel build --file release
 ```
 
-输出目录会带上配置文件名（`<项目名>_<配置文件名>`），因此同一份源码可以用多套配置产出不同目标，互不干扰。
+构建产物目录统一为 `.antel/build/<项目名>_<配置文件名>/`，例如默认配置会写入
+`.antel/build/<projectName>_antel/`；同一份源码可以用多套配置产出不同目标，互不干扰。
 
 ## fetch-ref
 
@@ -143,7 +144,7 @@ sudo antel uninstall --legacy-system
 
 ## clean
 
-删除整个输出目录（`<项目名>_<配置文件名>/`），包括生成目标、目标文件、日志与 hash 基线。基线也一并删除，所以 `clean` 之后直接 `antel build` 就会做一次全量构建，不必先 `rebuild`。
+删除整个构建产物目录（`.antel/build/<项目名>_<配置文件名>/`），包括生成目标、目标文件、日志与 hash 基线。基线也一并删除，所以 `clean` 之后直接 `antel build` 就会做一次全量构建，不必先 `rebuild`。
 
 ## link
 

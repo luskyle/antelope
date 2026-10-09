@@ -42,8 +42,8 @@ def test_before_build_output_change_triggers_relink(project):
     (project / 'prepare.py').write_text(
         'from pathlib import Path\n'
         'version = Path("map-version.txt").read_text().strip()\n'
-        'Path("build/version.map").parent.mkdir(exist_ok=True)\n'
-        'Path("build/version.map").write_text(' 
+        'Path(".antel/build/version.map").parent.mkdir(parents=True, exist_ok=True)\n'
+        'Path(".antel/build/version.map").write_text('
         'version + " { global: library_value; local: *; };\\n")\n')
     (project / 'map-version.txt').write_text('VERSION_1')
     write_config(
@@ -52,17 +52,17 @@ def test_before_build_output_change_triggers_relink(project):
         source=['src/library.c'],
         include_directories=[],
         compile_args=['-fPIC'],
-        link_args=['-Wl,--version-script=build/version.map'],
+        link_args=['-Wl,--version-script=.antel/build/version.map'],
         before_build=[{
             'command': ['python3', 'prepare.py'],
-            'outputs': ['build/version.map'],
+            'outputs': ['.antel/build/version.map'],
         }],
     )
 
     result = CliRunner().invoke(main, ['rebuild'])
 
     assert result.exit_code == 0, result.output
-    artifact = project / 'demo_antel' / 'libdemo.so'
+    artifact = project / '.antel' / 'build' / 'demo_antel' / 'libdemo.so'
     before = artifact.read_bytes()
 
     (project / 'map-version.txt').write_text('VERSION_2')

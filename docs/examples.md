@@ -46,10 +46,10 @@
   ```bash
   cd demos/gtkcalc
   antel rebuild
-  ./gtkcalc_antel/gtkcalc
+  ./.antel/build/gtkcalc_antel/gtkcalc
   ```
 
-- 程序还带了 `--auto-close N`（秒）参数用于无人值守验证，例如 CI 里 `./gtkcalc_antel/gtkcalc --auto-close 3` 会打开窗口 3 秒后自行退出
+- 程序还带了 `--auto-close N`（秒）参数用于无人值守验证，例如 CI 里 `./.antel/build/gtkcalc_antel/gtkcalc --auto-close 3` 会打开窗口 3 秒后自行退出
 
 !!! note "libadwaita 1.1 的几个 API 约束（代码已适配）"
     这套 demo 按 Ubuntu 22.04 自带的 libadwaita 1.1 / GTK 4.6 编写，有三个新手容易踩的点，源码里都有注释：
@@ -149,18 +149,18 @@ demos/resdemo/
 ```bash
 cd demos/resdemo
 antel rebuild
-./resdemo_antel/resdemo
+./.antel/build/resdemo_antel/resdemo
 ```
 
 窗口内左下角的开关切换深色/浅色主题（颜色来自 gresource 编进去的 `style.css`），右侧按钮重新从磁盘读取 `data_files` 的 banner——两个交互都演示「改资源 → build → 界面跟着变」。
 
 ### 日志与构建产物分析
 
-构建时每个环节都会落盘一份可复核的产物，`antel analyze` 把这些数据汇总成一页可视化报告。这是 resdemo 构建后 `demos/resdemo/resdemo_antel/log/` 下的实际内容：
+构建时每个环节都会落盘一份可复核的产物，`antel analyze` 把这些数据汇总成一页可视化报告。这是 resdemo 构建后 `demos/resdemo/.antel/build/resdemo_antel/log/` 下的实际内容：
 
 | 文件 | 内容 |
 | --- | --- |
-| `resdemo.gxx` | 本次执行的完整编译命令（gcc ... `-I/usr/include/libadwaita-1` ... `-o resdemo_antel/obj/src_main.o`） |
+| `resdemo.gxx` | 本次执行的完整编译命令（gcc ... `-I/usr/include/libadwaita-1` ... `-o .antel/build/resdemo_antel/obj/src_main.o`） |
 | `resdemo.make` | 走 make 后端时的完整输出（实际编译是否跳过/重编） |
 | `antel.mk` | 内部规则文件（生成物勿改；手工 `make -f` 可复现同一次编译） |
 | `resdemo_link.sh` | 链接脚本，链接就是执行这个脚本——能提前看到 `-ladwaita-1 -lgtk-4 ...` 全部库依赖 |
@@ -168,7 +168,7 @@ antel rebuild
 | `hashes` | hash 基线，记录上次成功构建的全部输入文件与 md5 |
 | `report.html` | `antel analyze` 生成的可视化分析报告（自包含单文件，浏览器打开） |
 
-**用报告逐项核对 resdemo**（`antel analyze` 后打开 `resdemo_antel/report.html`）：
+**用报告逐项核对 resdemo**（`antel analyze` 后打开 `.antel/build/resdemo_antel/report.html`）：
 
 - **资源情况**：展开到文件级——10 个资源文件，`data_files` 3 项（banner.txt/logo.png/payload.bin 的类型与大小）、`gresource` 6 项（XML + main.ui/style.css/logo.png/notes.txt + 生成的 `gresource.c` 142.3 KB）、`embed` 1 项（payload.bin 128 B + `_binary_assets_payload_bin` 符号）；每种资源带 ✓ 已复制/已编入/已嵌入状态
 - **目标符号表**：98 个符号按 nm 类型分类（函数/数据/BSS/未定义引用），`t exec_dir`、`T main` 等每个符号一个独立 chip
@@ -195,23 +195,35 @@ cd demos/libyaml
 antel rebuild
 ```
 
-上游源码缓存在 `.antel/refs/libyaml`，静态库位于 `yaml_antel/libyaml.a`。引用缓存
+上游源码缓存在 `.antel/refs/libyaml`，静态库位于 `.antel/build/yaml_antel/libyaml.a`。引用缓存
 不会被 `antel clean` 删除。
 
 ## cJSON：公开 JSON 库（ref）
 
 位置：`demos/cjson/`。示例通过 `ref` 获取 cJSON 的公开 `master` 分支，由 Antel 将
-核心解析器和 JSON Utils 编译成静态库，不添加本地 consumer。
+核心解析器和 JSON Utils 分别编译成静态/共享库，并构建上游 Unity 库、`cJSON_test`、
+`parse_examples` 和 `old_utils_tests`，共 8 个目标。不添加本地入口程序，也无需 CMake。
 
 ```bash
 cd demos/cjson
 antel fetch-ref
 antel rebuild
-ar t cjson_antel/libcjson.a
+for config in shared utils-static utils-shared unity demo parse-examples utils-tests; do
+    antel rebuild -f "$config" || exit 1
+done
+ar t .antel/build/cjson_antel/libcjson.a
+./.antel/build/cJSON_test_demo/cJSON_test
+(cd .antel/build/parse_examples_parse-examples && ./parse_examples)
+./.antel/build/old_utils_tests_utils-tests/old_utils_tests
 ```
 
 首次运行需要 Git 和网络。源码缓存在 `.antel/refs/cjson`；直接运行 `antel rebuild`
 也会在编译前自动下载缺失的引用。
+解析测试的输入文件通过 `data_files` 部署，必须先预取源码，并从该测试输出目录运行。
+两个测试程序分别验证 15 项解析用例和 6 组 Utils 用例；可执行文件通过相对 rpath
+加载本地构建的共享库。此示例选择上游目标的代表性子集，不覆盖全部测试或 fuzzing。
+配置依赖按上述顺序构建；完整目标清单和版本说明见
+[`demos/cjson/README.md`](https://github.com/luskyle/antelope/blob/main/demos/cjson/README.md)。
 
 ## libpng：static/shared 双目标（ref）
 
@@ -230,8 +242,8 @@ antel fetch-ref -f static
 python3 prepare_icc_fixture.py
 antel rebuild -f static
 antel rebuild -f shared
-ar t png16_static/libpng16.a | wc -l
-readelf -d png16_shared/libpng16.so.16.60.git | grep SONAME
+ar t .antel/build/png16_static/libpng16.a | wc -l
+readelf -d .antel/build/png16_shared/libpng16.so.16.60.git | grep SONAME
 ```
 
 两个库 target 各包含 17 个上游对象。共享库产物是 `libpng16.so.16.60.git`，SONAME
@@ -259,14 +271,14 @@ static`，让 `data_files` 源路径存在。
 示例运行（输入均从各自输出目录读取）：
 
 ```bash
-./pngtest_pngtest/pngtest pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
-./pnggetset_pnggetset/pnggetset
-./pngvalid_pngvalid/pngvalid --gamma-16-to-8
-./pngunknown_pngunknown/pngunknown --strict default=discard pngunknown_pngunknown/testdata/pngtest.png
-./pngimage_pngimage/pngimage --list-combos --log pngimage_pngimage/testdata/pngsuite/basn0g08.png
-./pngstest_pngstest/pngstest --log --tmpfile /tmp/ps- pngstest_pngstest/testdata/testpngs/gray-1.png
-./pngfix_pngfix/pngfix --quiet pngfix_pngfix/testdata/pngtest.png
-./png-fix-itxt_png-fix-itxt/png-fix-itxt < png-fix-itxt_png-fix-itxt/testdata/pngtest.png > /tmp/png-fixed.png
+./.antel/build/pngtest_pngtest/pngtest .antel/build/pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
+./.antel/build/pnggetset_pnggetset/pnggetset
+./.antel/build/pngvalid_pngvalid/pngvalid --gamma-16-to-8
+./.antel/build/pngunknown_pngunknown/pngunknown --strict default=discard .antel/build/pngunknown_pngunknown/testdata/pngtest.png
+./.antel/build/pngimage_pngimage/pngimage --list-combos --log .antel/build/pngimage_pngimage/testdata/pngsuite/basn0g08.png
+./.antel/build/pngstest_pngstest/pngstest --log --tmpfile /tmp/ps- .antel/build/pngstest_pngstest/testdata/testpngs/gray-1.png
+./.antel/build/pngfix_pngfix/pngfix --quiet .antel/build/pngfix_pngfix/testdata/pngtest.png
+./.antel/build/png-fix-itxt_png-fix-itxt/png-fix-itxt < .antel/build/png-fix-itxt_png-fix-itxt/testdata/pngtest.png > /tmp/png-fixed.png
 ```
 
 另有 4 个不属于上游 CMake target 的 `contrib/examples` 程序，也提供了单独配置：
@@ -277,10 +289,10 @@ static`，让 `data_files` 源路径存在。
 for target in example-iccfrompng example-pngpixel example-pngtopng example-simpleover; do
     antel rebuild -f "$target"
 done
-./iccfrompng_example-iccfrompng/iccfrompng iccfrompng_example-iccfrompng/testdata/icc-profile.png
-./pngpixel_example-pngpixel/pngpixel 0 0 pngpixel_example-pngpixel/testdata/pngtest.png
-./pngtopng_example-pngtopng/pngtopng pngtopng_example-pngtopng/testdata/pngtest.png /tmp/pngtopng.png
-./simpleover_example-simpleover/simpleover simpleover_example-simpleover/testdata/background.png /tmp/simpleover.png
+./.antel/build/iccfrompng_example-iccfrompng/iccfrompng .antel/build/iccfrompng_example-iccfrompng/testdata/icc-profile.png
+./.antel/build/pngpixel_example-pngpixel/pngpixel 0 0 .antel/build/pngpixel_example-pngpixel/testdata/pngtest.png
+./.antel/build/pngtopng_example-pngtopng/pngtopng .antel/build/pngtopng_example-pngtopng/testdata/pngtest.png /tmp/pngtopng.png
+./.antel/build/simpleover_example-simpleover/simpleover .antel/build/simpleover_example-simpleover/testdata/background.png /tmp/simpleover.png
 ```
 
 ## yaml-cpp：C++ YAML 库（ref）
@@ -291,28 +303,36 @@ contrib 源文件编译成静态库，不添加本地 consumer。
 ```bash
 cd demos/yaml-cpp
 antel rebuild
-ar t yaml-cpp_antel/libyaml-cpp.a | wc -l
+ar t .antel/build/yaml-cpp_antel/libyaml-cpp.a | wc -l
 ```
 
 首次构建需要 Git 和网络。
 
-## json-c：JSON 库（ref + CMake 配置）
+## json-c：库、命令行工具和测试目标（ref + Python 配置探测）
 
-位置：`demos/json-c/`。json-c 需要平台探测生成的头文件；这里 CMake 只负责 configure，
-由 Antel 编译其 14 个正式 C 源文件为静态库，不执行 CMake build。
+位置：`demos/json-c/`。json-c 需要平台探测生成的头文件；各 Antel 配置通过
+`before_build` 自动调用 `prepare_json_c.py`，由该脚本使用 C 编译器探测平台并直接生成
+配置头文件。不使用 CMake。
+Antel 构建静态/共享库、上游 `json_parse` 工具，以及解析、JSON Pointer、JSON Patch
+三个代表性测试目标。
 
 ```bash
 cd demos/json-c
 antel fetch-ref
-cmake -S .antel/refs/json-c -B build/json-c-config \
-    -DBUILD_TESTING=OFF -DBUILD_APPS=OFF \
-    -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON \
-    -DDISABLE_EXTRA_LIBS=ON
 antel rebuild
-ar t json-c_antel/libjson-c.a | wc -l
+for config in shared json-parse test-parse test-json-pointer test-json-patch; do
+    antel rebuild -f "$config" || exit 1
+done
+ar t .antel/build/json-c_antel/libjson-c.a | wc -l
+printf '{"library":"json-c","built_by":"Antel"}\n' | ./.antel/build/json_parse_json-parse/json_parse
+TEST_PARSE_CHUNKSIZE=7 ./.antel/build/test_parse_test-parse/test_parse
+./.antel/build/test_json_pointer_test-json-pointer/test_json_pointer
+./.antel/build/test_json_patch_test-json-patch/test_json_patch .antel/build/test_json_patch_test-json-patch/testdata
 ```
 
-静态库包含 JSON Pointer 和 JSON Patch 支持。
+两种库均由相同的 14 个上游编译单元构建；测试程序通过相对 rpath 加载本地共享库。
+JSON Patch fixtures 通过 `data_files` 部署。完整清单见
+[`demos/json-c/README.md`](https://github.com/luskyle/antelope/blob/main/demos/json-c/README.md)。
 
 ## libuv：Linux 事件循环（ref）
 
@@ -322,7 +342,7 @@ POSIX 实现，编译成静态库，不包括 Windows/macOS 源文件或本地 c
 ```bash
 cd demos/libuv
 antel rebuild
-ar t uv_antel/libuv.a | wc -l
+ar t .antel/build/uv_antel/libuv.a | wc -l
 ```
 
 本 demo 针对 Linux，使用者链接归档时需要 pthread、dl 和 rt。
@@ -336,12 +356,12 @@ Antel 配置，之后由 Antel 将 196 个上游源文件编译成静态库。
 ```bash
 cd demos/libgit2
 antel fetch-ref -f refs
-cmake -S .antel/refs/libgit2 -B build/libgit2-config \
+cmake -S .antel/refs/libgit2 -B .antel/build/libgit2-config \
     -DBUILD_TESTS=OFF -DBUILD_CLI=OFF -DBUILD_EXAMPLES=OFF \
     -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 python3 prepare_antelope.py
 antel rebuild -f generated
-ar t git2_generated/libgit2.a | wc -l
+ar t .antel/build/git2_generated/libgit2.a | wc -l
 ```
 
 此处 CMake 只配置，不编译；静态库依赖系统 OpenSSL、PCRE 和 zlib，最终 consumer
@@ -384,7 +404,7 @@ demos/antelstats/
     "compiler": "gxx",
     "source": ["src/main.c"],
     "compile_args": ["-O2", "-Wall", "-Isrc"],
-    "link_args": ["-Lantelstats_antel", "-lantelstats"],
+    "link_args": ["-L.antel/build/antelstats_antel", "-lantelstats"],
     "report": false,
     "rpath": ["$ORIGIN/../antelstats_antel"]
 }
@@ -401,8 +421,8 @@ libantelstats.so.1 => .../antelstats_antel/libantelstats.so.1
 ```bash
 cd demos/antelstats
 antel rebuild                 # 版本化共享库 + 软链
-antel rebuild -f app && ./app_app/app          # 内嵌数据直接出统计报表
-antel analyze -f app          # 生成可视化报告 app_app/report.html
+antel rebuild -f app && ./.antel/build/app_app/app          # 内嵌数据直接出统计报表
+antel analyze -f app          # 生成可视化报告 .antel/build/app_app/report.html
 ```
 
 !!! note "sanitize / coverage 怎么用"

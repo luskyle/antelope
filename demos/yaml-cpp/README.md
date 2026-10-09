@@ -7,7 +7,7 @@ Run from this directory. The first build needs Git and network access:
 
 ```bash
 antel rebuild
-ar t yaml-cpp_antel/libyaml-cpp.a | wc -l
+ar t .antel/build/yaml-cpp_antel/libyaml-cpp.a | wc -l
 ```
 
 The archive contains 32 yaml-cpp upstream objects. The source checkout is cached

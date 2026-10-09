@@ -27,7 +27,7 @@ def test_analyze_generates_html_report(project):
     result = antel('analyze')
 
     assert result.exit_code == 0
-    report = project / 'demo_antel' / 'report.html'
+    report = project / '.antel' / 'build' / 'demo_antel' / 'report.html'
     assert report.exists()
     text = report.read_text()
 
@@ -44,9 +44,9 @@ def test_report_flag_auto_generates_after_build(project):
     """report: true → rebuild/build 成功后自动生成报告"""
     write_config(project, report=True)
     assert antel('rebuild').exit_code == 0
-    assert (project / 'demo_antel' / 'report.html').exists()
+    assert (project / '.antel' / 'build' / 'demo_antel' / 'report.html').exists()
 
-    report = project / 'demo_antel' / 'report.html'
+    report = project / '.antel' / 'build' / 'demo_antel' / 'report.html'
     before = report.stat().st_mtime_ns
 
     # 无改动时 build 不重编，也不重新生成报告
@@ -58,11 +58,11 @@ def test_report_flag_does_not_affect_artifacts(project):
     """report 只决定是否生成报告：产物字节应与 report: false 完全一致"""
     write_config(project)
     assert antel('rebuild').exit_code == 0
-    without_report = (project / 'demo_antel' / 'demo').read_bytes()
+    without_report = (project / '.antel' / 'build' / 'demo_antel' / 'demo').read_bytes()
 
     write_config(project, report=True)
     assert antel('rebuild').exit_code == 0
-    with_report = (project / 'demo_antel' / 'demo').read_bytes()
+    with_report = (project / '.antel' / 'build' / 'demo_antel' / 'demo').read_bytes()
 
     assert with_report == without_report
 
@@ -72,7 +72,7 @@ def test_report_shows_symbols_by_default(project):
     assert antel('rebuild').exit_code == 0
     antel('analyze')
 
-    text = (project / 'demo_antel' / 'report.html').read_text()
+    text = (project / '.antel' / 'build' / 'demo_antel' / 'report.html').read_text()
     assert 'src/main.c' in text
     assert '函数 (T)' in text          # nm 符号分类标签
     assert 'main' in text

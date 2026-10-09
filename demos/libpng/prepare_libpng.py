@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / '.antel' / 'refs' / 'libpng'
-OUTPUT = ROOT / 'build' / 'libpng-generated'
+OUTPUT = ROOT / '.antel' / 'build' / 'libpng-generated'
 
 
 def run(argv):

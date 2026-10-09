@@ -8,7 +8,7 @@
     ```bash
     cd demos/resdemo
     antel rebuild
-    antel analyze               # 生成 resdemo_antel/report.html
+    antel analyze               # 生成 .antel/build/resdemo_antel/report.html
     ```
 
 ## 报告全貌（resdemo 实例）
@@ -23,7 +23,7 @@ resdemo 是 GTK4/libadwaita 可执行程序，配置了 `pkg_config`、`data_fil
 
 | # | 区块 | resdemo 里能看到什么 | 怎么用 |
 | --- | --- | --- | --- |
-| 1 | **产物** | 目标文件 `resdemo_antel/resdemo`，50.3 KB，`file` 探测为 ELF 可执行文件 | 一眼确认产物是否已生成、体积是否正常 |
+| 1 | **产物** | 目标文件 `.antel/build/resdemo_antel/resdemo`，50.3 KB，`file` 探测为 ELF 可执行文件 | 一眼确认产物是否已生成、体积是否正常 |
 | 2 | **增量状态** | hash 基线存在（✓），本次变化文件、待重编清单 | 排查「改了却没重编」：先看 `log/hashes_diff` 与 `log/stale_files` |
 | 3 | **编译参数统计** | `-O2×2`、`-Wall×2`，配合一长串 `-I/usr/include/libadwaita-1 ...` | 确认优化级别、宏定义与警告开关是否符合预期 |
 | 4 | **资源情况** | 10 个资源文件展开到文件级：`data_files` 3 项（banner.txt/logo.png/payload.bin）、`gresource` 6 项（XML + 4 个引用文件 + 生成的 `gresource.c` 142.3 KB）、`embed` 1 项（payload.bin + `_binary_assets_payload_bin` 符号），每项带 ✓ 复制/编入/嵌入状态 | 核对资源是否如期打包；`gresource.c` 体积即单文件分发的真实成本 |
@@ -55,4 +55,4 @@ resdemo 是 GTK4/libadwaita 可执行程序，配置了 `pkg_config`、`data_fil
 
 - 如何触发：配置字段 [`report`](configuration.md)（构建后自动生成）或命令 [`antel analyze`](commands.md)
 - 报告字段与构建目录的关系：[构建目录布局](configuration.md)
-- 其他示例：`demos/antelstats` 也带 `app_app/report.html`（版本化共享库的消费端报告）
+- 其他示例：`demos/antelstats` 也带 `.antel/build/app_app/report.html`（版本化共享库的消费端报告）

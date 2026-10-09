@@ -13,7 +13,7 @@
         "-Isrc"
     ],
     "link_args": [
-        "-Lantelstats_antel",
+        "-L.antel/build/antelstats_antel",
         "-lantelstats"
     ],
     "report": false,

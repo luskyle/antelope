@@ -17,14 +17,14 @@ antel fetch-ref -f static
 python3 prepare_icc_fixture.py
 antel rebuild -f static
 antel rebuild -f shared
-ar t png16_static/libpng16.a | wc -l
-readelf -d png16_shared/libpng16.so.16.60.git | grep SONAME
+ar t .antel/build/png16_static/libpng16.a | wc -l
+readelf -d .antel/build/png16_shared/libpng16.so.16.60.git | grep SONAME
 ```
 
 Both targets contain 17 upstream implementation objects. The shared
 configuration produces `libpng16.so.16.60.git`, SONAME `libpng16.so.16`, and
 the usual symlinks. Antel's prepare step copies upstream's standard
-`pnglibconf.h` to `build/libpng-generated` and generates `libpng.vers` from
+`pnglibconf.h` to `.antel/build/libpng-generated` and generates `libpng.vers` from
 upstream `vers.c` with the C preprocessor and `dfn.awk`; CMake is not needed.
 
 ## PNG viewer window
@@ -37,8 +37,8 @@ development package (`libgtk-3-dev` on Debian/Ubuntu) and run in a desktop sessi
 ```bash
 antel rebuild -f shared
 antel rebuild -f pngviewer
-./pngviewer_pngviewer/pngviewer
-./pngviewer_pngviewer/pngviewer /path/to/image.png
+./.antel/build/pngviewer_pngviewer/pngviewer
+./.antel/build/pngviewer_pngviewer/pngviewer /path/to/image.png
 ```
 
 With no path, it opens Antelope's transparent logo copied into the target's

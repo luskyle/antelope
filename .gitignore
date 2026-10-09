@@ -8,6 +8,7 @@ build/
 .pytest_cache/
 site/
 **/.antel/refs/
+**/.antel/build/
 
 test/log
 test/obj
@@ -15,7 +16,7 @@ test/hello*_*
 *_antel/
 
 cdemo_antel_std11
-# 多配置输出的输出目录（<项目名>_<配置文件名>/，与 *_antel/ 同构）
+# 兼容忽略迁移前的项目根目录输出；当前构建产物统一位于 .antel/build/。
 *_app/
 *_shared/
 *_cov/

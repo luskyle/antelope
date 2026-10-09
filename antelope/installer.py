@@ -96,7 +96,7 @@ def collect_install_plan(prefix, selected):
             continue
         if not isinstance(name, str) or re.fullmatch(r'[A-Za-z0-9_.-]+', name) is None:
             raise ConfigError(f'{path.name}: projectName 非法')
-        output = directory / f'{name}_{path.stem}'
+        output = directory / '.antel' / 'build' / f'{name}_{path.stem}'
         if kind == 'exe':
             filename = name
         elif kind == 'static':

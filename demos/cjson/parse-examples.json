@@ -1,0 +1,12 @@
+{
+    "projectName": "parse_examples",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [{"url": "https://github.com/DaveGamble/cJSON.git", "branch": "master", "name": "cjson"}],
+    "source": [".antel/refs/cjson/tests/parse_examples.c"],
+    "include_directories": [],
+    "compile_args": ["-O2", "-Wall", "-std=c89", "-I.antel/refs/cjson"],
+    "link_args": [".antel/build/cjson_shared/libcjson.so", ".antel/build/unity_unity/libunity.a", "-lm"],
+    "rpath": ["$ORIGIN/../cjson_shared"],
+    "data_files": [{"from": ".antel/refs/cjson/tests/inputs", "to": "inputs"}]
+}

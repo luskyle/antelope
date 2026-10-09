@@ -1,0 +1,24 @@
+{
+    "projectName": "test_parse",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [{"url": "https://github.com/json-c/json-c.git", "branch": "master", "name": "json-c"}],
+    "before_build": [
+        {
+            "command": ["python3", "prepare_json_c.py"],
+            "outputs": [".antel/build/json-c-config/config.h", ".antel/build/json-c-config/json_config.h", ".antel/build/json-c-config/json.h", ".antel/build/json-c-config/apps_config.h"]
+        }
+    ],
+    "source": [".antel/refs/json-c/tests/test_parse.c"],
+    "include_directories": [],
+    "compile_args": [
+        "-O2",
+        "-Wall",
+        "-D_GNU_SOURCE",
+        "-I.antel/refs/json-c",
+        "-I.antel/build/json-c-config",
+        "-I.antel/build/json-c-config/gen_headers"
+    ],
+    "link_args": [".antel/build/json-c_shared/libjson-c.so", "-lm"],
+    "rpath": ["$ORIGIN/../json-c_shared"]
+}

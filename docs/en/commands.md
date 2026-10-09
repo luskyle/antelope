@@ -25,7 +25,10 @@ antel rebuild -f gcc
 antel build --file release
 ```
 
-The output directory is suffixed with the configuration file name (`<project name>_<configuration name>`), so the same source tree can produce different targets with different configurations without any interference.
+Build artifacts live under `.antel/build/<project name>_<configuration name>/` (for
+example, the default config writes to `.antel/build/<projectName>_antel/`), so the
+same source tree can produce different targets with different configurations
+without any interference.
 
 ## fetch-ref
 
@@ -162,7 +165,7 @@ previously, run `sudo ldconfig` yourself after removing the old shared libraries
 
 ## clean
 
-Deletes the entire output directory (`<project name>_<configuration name>/`), including generated targets, object files, logs, and the hash baseline. Since the baseline is deleted too, running `antel build` right after `clean` performs a full build — no need for `rebuild` first.
+Deletes the entire build output directory (`.antel/build/<project name>_<configuration name>/`), including generated targets, object files, logs, and the hash baseline. Since the baseline is deleted too, running `antel build` right after `clean` performs a full build — no need for `rebuild` first.
 
 ## link
 

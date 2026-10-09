@@ -1,0 +1,10 @@
+{
+    "projectName": "cjson_utils",
+    "target_type": "static",
+    "compiler": "gxx",
+    "ref": [{"url": "https://github.com/DaveGamble/cJSON.git", "branch": "master", "name": "cjson"}],
+    "source": [".antel/refs/cjson/cJSON_Utils.c"],
+    "include_directories": [],
+    "compile_args": ["-O2", "-Wall", "-std=c89", "-I.antel/refs/cjson"],
+    "link_args": []
+}

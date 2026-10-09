@@ -19,8 +19,8 @@ def make_artifact(project, filename, name, kind, artifact, **overrides):
     config = {'projectName': name, 'target_type': kind}
     config.update(overrides)
     (project / f'{filename}.json').write_text(json.dumps(config))
-    output = project / f'{name}_{filename}'
-    output.mkdir()
+    output = project / '.antel' / 'build' / f'{name}_{filename}'
+    output.mkdir(parents=True)
     target = output / artifact
     target.write_bytes(b'build result')
     return target
@@ -352,7 +352,7 @@ def test_legacy_uninstall_resource_cleanup_keeps_unrelated_files(project):
     config = json.loads((project / 'release.json').read_text())
     config['data_files'] = [{'from': 'logo.png', 'to': 'assets/logo.png'}]
     (project / 'release.json').write_text(json.dumps(config))
-    resource = project / 'viewer_release/assets/logo.png'
+    resource = project / '.antel' / 'build' / 'viewer_release' / 'assets/logo.png'
     resource.parent.mkdir()
     resource.write_bytes(b'logo')
     installed = prefix / 'share/viewer_release/assets/logo.png'

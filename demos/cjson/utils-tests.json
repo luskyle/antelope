@@ -1,0 +1,11 @@
+{
+    "projectName": "old_utils_tests",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [{"url": "https://github.com/DaveGamble/cJSON.git", "branch": "master", "name": "cjson"}],
+    "source": [".antel/refs/cjson/tests/old_utils_tests.c"],
+    "include_directories": [],
+    "compile_args": ["-O2", "-Wall", "-std=c89", "-I.antel/refs/cjson"],
+    "link_args": [".antel/build/cjson_utils_utils-shared/libcjson_utils.so", ".antel/build/cjson_shared/libcjson.so", ".antel/build/unity_unity/libunity.a", "-lm"],
+    "rpath": ["$ORIGIN/../cjson_shared", "$ORIGIN/../cjson_utils_utils-shared"]
+}

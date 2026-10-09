@@ -77,10 +77,10 @@ def test_pkg_config_injects_flags_and_links(project, monkeypatch):
 
     assert run_program(project) == 'foo=7'
 
-    compile_log = (project / 'demo_antel' / 'log' / 'demo.gxx').read_text()
+    compile_log = (project / '.antel' / 'build' / 'demo_antel' / 'log' / 'demo.gxx').read_text()
     assert f'-I{ext}' in compile_log
 
-    link_script = (project / 'demo_antel' / 'log' / 'demo_link.sh').read_text()
+    link_script = (project / '.antel' / 'build' / 'demo_antel' / 'log' / 'demo_link.sh').read_text()
     assert f'-L{libs_dir} -lfoo' in link_script
 
 

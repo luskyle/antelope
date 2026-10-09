@@ -1,0 +1,12 @@
+{
+    "projectName": "cjson_utils",
+    "target_type": "shared",
+    "compiler": "gxx",
+    "ref": [{"url": "https://github.com/DaveGamble/cJSON.git", "branch": "master", "name": "cjson"}],
+    "source": [".antel/refs/cjson/cJSON_Utils.c"],
+    "include_directories": [],
+    "compile_args": ["-O2", "-Wall", "-std=c89", "-fPIC", "-fvisibility=hidden", "-DCJSON_EXPORT_SYMBOLS", "-DCJSON_API_VISIBILITY", "-I.antel/refs/cjson"],
+    "link_args": [".antel/build/cjson_shared/libcjson.so"],
+    "rpath": ["$ORIGIN/../cjson_shared"],
+    "version": "1.7.19"
+}

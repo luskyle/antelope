@@ -7,7 +7,7 @@ Run from this directory. The first build needs Git and network access:
 
 ```bash
 antel rebuild
-ar t uv_antel/libuv.a | wc -l
+ar t .antel/build/uv_antel/libuv.a | wc -l
 ```
 
 The archive contains the 35 selected Linux/POSIX objects. The source list

@@ -2,13 +2,17 @@
 
 `antel.json` 由 `antel init` 生成，也可以手写。全部字段如下：
 
+每个配置的构建产物、对象文件、日志和报告统一放在 `.antel/build/<projectName>_<配置名>/`
+下，例如 `antel.json` 默认生成 `.antel/build/demo_antel/`。Antel 准备的中间生成物应放在
+`.antel/build/`；ref checkout 位于同级的 `.antel/refs/`。
+
 | 字段                | 类型       | 必填 | 含义                                                                 |
 | ------------------- | ---------- | ---- | -------------------------------------------------------------------- |
 | projectName         | 字符串     | 是   | 项目名，同时决定输出目录名与生成目标名，不能为空，且只能含字母、数字、下划线、点与连字符 |
 | source              | 字符串数组 | 是   | 参与编译的 c/c++ 源文件路径，相对配置文件所在目录，不能为空          |
 | ref                 | 对象数组   | 否   | 编译前浅克隆的 Git 项目；每项包含 `url`，可选 `branch`、`name`       |
 | before_build        | 对象数组   | 否   | ref 下载后、增量扫描前按顺序执行；每项含 argv `command` 和可选 `outputs` |
-| after_build         | 对象数组   | 否   | build/rebuild 成功后按顺序执行；每项含 argv `command`                     |
+| after_build         | 对象数组 | 否   | `antel build` / `antel rebuild` 成功后按顺序执行；每项含 argv `command`           |
 | include_directories | 字符串数组 | 否   | 头文件搜索路径，作为 `-I` 传给编译器，其中的文件参与变更检测         |
 | target_type         | 字符串     | 是   | `static`、`shared`、`exe`，不区分大小写                              |
 | compiler            | 字符串     | 是   | `msvc`、`gxx`、`llvm`，不区分大小写                                  |
@@ -84,7 +88,7 @@
   "before_build": [
     {
       "command": ["python3", "prepare.py", "--mode", "release"],
-      "outputs": ["build/generated/config.h", "build/generated/exports.map"]
+      "outputs": [".antel/build/generated/config.h", ".antel/build/generated/exports.map"]
     }
   ]
 }
@@ -316,13 +320,13 @@ cd <输出目录>/obj && gcov <对应目标>.gcda
 - 真实文件 `libX.so.1.0.0`（链接命令带 `-Wl,-soname,libX.so.1`，soname 由主版本号推导）
 - 软链 `libX.so.1 -> libX.so.1.0.0`、`libX.so -> libX.so.1`，供编译期 `-lX` 与运行期按 soname 查找
 - 显式指定 `soname` 优先于推导，例如 `"soname": "libcustom.so.3"`
-- `GENERATED_TARGETS` 已覆盖 `*.so.*`，rebuild/clean 会回收版本化文件与软链
+- `GENERATED_TARGETS` 已覆盖 `*.so.*`，`antel rebuild` / `antel clean` 会回收版本化文件与软链
 
 **消费端**：可执行程序依赖这个库时，用 `link_args` 指到库目录、用 `rpath` 让运行期能找到（`test/antelstats/app.json` 是完整示例）：
 
 ```json
 {
-  "link_args": ["-Lantelstats_antel", "-lantelstats"],
+  "link_args": ["-L.antel/build/antelstats_antel", "-lantelstats"],
   "rpath": ["$ORIGIN/../antelstats_antel"]
 }
 ```
@@ -356,7 +360,10 @@ cd <输出目录>/obj && gcov <对应目标>.gcda
 
 ## 构建目录
 
-输出目录是 `./<projectName>_<配置文件名>/`：配置文件名 `antel.json`、项目名 `helloworld`，输出目录就是 `helloworld_antel/`。
+输出目录是 `./.antel/build/<projectName>_<配置文件名>/`：配置文件名 `antel.json`、项目名
+`helloworld`，输出目录就是 `.antel/build/helloworld_antel/`。对象文件、日志、报告和构建目标
+都在这里；准备阶段生成的中间文件放在 `.antel/build/`，ref checkout 在
+`.antel/refs/`，`antel clean` 只清理对应的 `.antel/build/<projectName>_<配置文件名>/`。
 
 | 路径 | 内容 |
 | --- | --- |

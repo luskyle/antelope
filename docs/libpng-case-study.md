@@ -40,8 +40,8 @@ cd demos/libpng
 antel fetch-ref -f static
 antel rebuild -f static
 antel rebuild -f shared
-ar t png16_static/libpng16.a | wc -l
-readelf -d png16_shared/libpng16.so.16.60.git | grep SONAME
+ar t .antel/build/png16_static/libpng16.a | wc -l
+readelf -d .antel/build/png16_shared/libpng16.so.16.60.git | grep SONAME
 ```
 
 `ref` 将上游 `libpng16` 分支浅克隆到 `.antel/refs/libpng/`。静态库和共享库都编译
@@ -65,8 +65,8 @@ libpng 编译需要配置头，版本化共享库还需要 ELF version script。
     {
       "command": ["python3", "prepare_libpng.py"],
       "outputs": [
-        "build/libpng-generated/pnglibconf.h",
-        "build/libpng-generated/libpng.vers"
+        ".antel/build/libpng-generated/pnglibconf.h",
+        ".antel/build/libpng-generated/libpng.vers"
       ]
     }
   ]
@@ -87,14 +87,14 @@ libpng 编译需要配置头，版本化共享库还需要 ELF version script。
 本次共享库构建生成：
 
 ```text
-png16_shared/
+.antel/build/png16_shared/
   libpng16.so.16.60.git
   libpng16.so.16 -> libpng16.so.16.60.git
   libpng16.so -> libpng16.so.16.60.git
 ```
 
 实际 so 的 SONAME 为 `libpng16.so.16`。配置使用 `version: "16.60.git"`，
-并把 `-Wl,--version-script=build/libpng-generated/libpng.vers` 传给链接器。
+并把 `-Wl,--version-script=.antel/build/libpng-generated/libpng.vers` 传给链接器。
 库文件名、运行时名称和导出符号版本由配置及上游生成脚本共同控制。
 
 ## 用自己的 so 打开 PNG 窗口
@@ -105,8 +105,8 @@ png16_shared/
 
 ```bash
 antel rebuild -f pngviewer
-./pngviewer_pngviewer/pngviewer
-./pngviewer_pngviewer/pngviewer /path/to/image.png
+./.antel/build/pngviewer_pngviewer/pngviewer
+./.antel/build/pngviewer_pngviewer/pngviewer /path/to/image.png
 ```
 
 GTK 3 负责窗口、文件选择器和绘制表面；PNG 解码直接调用我们生成的 libpng 的
@@ -119,11 +119,11 @@ GTK 3 负责窗口、文件选择器和绘制表面；PNG 解码直接调用我�
 可检查实际运行路径：
 
 ```bash
-ldd pngviewer_pngviewer/pngviewer | grep libpng
-./pngviewer_pngviewer/pngviewer --smoke-test
+ldd .antel/build/pngviewer_pngviewer/pngviewer | grep libpng
+./.antel/build/pngviewer_pngviewer/pngviewer --smoke-test
 ```
 
-验证时 `ldd` 指向 `png16_shared/libpng16.so.16`，logo 解码尺寸为 `512 x 512`。
+验证时 `ldd` 指向 `.antel/build/png16_shared/libpng16.so.16`，logo 解码尺寸为 `512 x 512`。
 窗口 smoke test 绘制后退出，并将窗口截图保存到 `/tmp/antel-pngviewer.png`。
 
 ## 独立目录安装与卸载
@@ -182,8 +182,8 @@ done
 for target in example-iccfrompng example-pngpixel example-pngtopng example-simpleover; do
     antel rebuild -f "$target"
 done
-./pngtest_pngtest/pngtest pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
-./pngvalid_pngvalid/pngvalid --gamma-16-to-8
+./.antel/build/pngtest_pngtest/pngtest .antel/build/pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
+./.antel/build/pngvalid_pngvalid/pngvalid --gamma-16-to-8
 ```
 
 图片、ICC fixture 和各个程序的输入要求见[示例说明](examples.md#libpngstaticshared-ref)

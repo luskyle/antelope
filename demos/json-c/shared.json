@@ -1,26 +1,12 @@
 {
     "projectName": "json-c",
-    "target_type": "static",
+    "target_type": "shared",
     "compiler": "gxx",
-    "ref": [
-        {
-            "url": "https://github.com/json-c/json-c.git",
-            "branch": "master",
-            "name": "json-c"
-        }
-    ],
+    "ref": [{"url": "https://github.com/json-c/json-c.git", "branch": "master", "name": "json-c"}],
     "before_build": [
         {
-            "command": [
-                "python3",
-                "prepare_json_c.py"
-            ],
-            "outputs": [
-                ".antel/build/json-c-config/config.h",
-                ".antel/build/json-c-config/json_config.h",
-                ".antel/build/json-c-config/json.h",
-                ".antel/build/json-c-config/apps_config.h"
-            ]
+            "command": ["python3", "prepare_json_c.py"],
+            "outputs": [".antel/build/json-c-config/config.h", ".antel/build/json-c-config/json_config.h", ".antel/build/json-c-config/json.h", ".antel/build/json-c-config/apps_config.h"]
         }
     ],
     "source": [
@@ -43,9 +29,11 @@
     "compile_args": [
         "-O2",
         "-Wall",
+        "-fPIC",
         "-D_GNU_SOURCE",
         "-I.antel/refs/json-c",
         "-I.antel/build/json-c-config"
     ],
-    "link_args": ["-lm"]
+    "link_args": ["-Wl,--version-script=.antel/refs/json-c/json-c.sym", "-lm"],
+    "version": "5.5.0"
 }

@@ -51,11 +51,11 @@ def test_backends_produce_identical_artifacts(project):
     """断言二（产物等价）：同一棵树用两种后端构建，可执行文件字节一致"""
     write_config(project, backend='make')
     assert antel('rebuild').exit_code == 0
-    with_make = (project / 'demo_antel' / 'demo').read_bytes()
+    with_make = (project / '.antel' / 'build' / 'demo_antel' / 'demo').read_bytes()
 
     write_config(project, backend='antel')
     assert antel('rebuild').exit_code == 0
-    with_antel = (project / 'demo_antel' / 'demo').read_bytes()
+    with_antel = (project / '.antel' / 'build' / 'demo_antel' / 'demo').read_bytes()
 
     assert with_make == with_antel
 
@@ -66,7 +66,7 @@ def test_make_never_skips_a_stale_object(project):
     assert antel('rebuild').exit_code == 0
 
     (project / 'inc' / 'bar.h').write_text('#define BAR_MSG "bar2"\n')
-    os.utime(project / 'demo_antel' / 'obj' / 'src_main.o')
+    os.utime(project / '.antel' / 'build' / 'demo_antel' / 'obj' / 'src_main.o')
 
     assert antel('build').exit_code == 0
 
@@ -77,12 +77,12 @@ def test_sync_baseline_after_manual_make(project):
     """手工跑过内部规则文件（绕过 antel 簿记）后，sync-baseline 能让 build 不再重编"""
     write_config(project, backend='make')
     assert antel('rebuild').exit_code == 0
-    rule_file = project / 'demo_antel' / 'log' / 'antel.mk'
+    rule_file = project / '.antel' / 'build' / 'demo_antel' / 'log' / 'antel.mk'
 
     # 对照组：改头文件、手工跑规则文件、但不 sync —— antel 会认为仍要重编
     (project / 'inc' / 'bar.h').write_text('#define BAR_MSG "bar2"\n')
     subprocess.run(['make', '-f', str(rule_file), 'all'], cwd=project, check=True)
-    obj_file = project / 'demo_antel' / 'obj' / 'src_main.o'
+    obj_file = project / '.antel' / 'build' / 'demo_antel' / 'obj' / 'src_main.o'
     before = obj_file.stat().st_mtime_ns
     assert antel('build').exit_code == 0
     assert obj_file.stat().st_mtime_ns != before, '对照失败：未 sync 时 build 应该仍要重编'

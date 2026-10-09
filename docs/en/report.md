@@ -8,7 +8,7 @@
     ```bash
     cd demos/resdemo
     antel rebuild
-    antel analyze               # produces resdemo_antel/report.html
+    antel analyze               # produces .antel/build/resdemo_antel/report.html
     ```
 
 ## The report in full (resdemo instance)
@@ -23,7 +23,7 @@ resdemo is a GTK4/libadwaita executable configured with `pkg_config`, `data_file
 
 | # | Block | What resdemo shows | How to use it |
 | --- | --- | --- | --- |
-| 1 | **Artifacts** | target `resdemo_antel/resdemo`, 50.3 KB, probed by `file` as an ELF executable | at a glance: is the artifact built, is the size sane |
+| 1 | **Artifacts** | target `.antel/build/resdemo_antel/resdemo`, 50.3 KB, probed by `file` as an ELF executable | at a glance: is the artifact built, is the size sane |
 | 2 | **Incremental status** | hash baseline exists (✓), changed files this run, stale list | "I changed it but it didn't rebuild": check `log/hashes_diff` and `log/stale_files` first |
 | 3 | **Compile flag statistics** | `-O2×2`, `-Wall×2`, plus the long `-I/usr/include/libadwaita-1 ...` chain | confirm optimization level, macros and warning switches match expectations |
 | 4 | **Resources** | 10 resource files expanded to file level: `data_files` 3 items (banner.txt/logo.png/payload.bin), `gresource` 6 items (XML + 4 referenced files + generated `gresource.c` at 142.3 KB), `embed` 1 item (payload.bin + `_binary_assets_payload_bin` symbol), each with ✓ copied/compiled-in/embedded status | verify resources were packaged as expected; the `gresource.c` size is the real cost of single-file distribution |
@@ -55,4 +55,4 @@ The **Resources** block only appears when resources are configured; plain code p
 
 - How to trigger: config field [`report`](../configuration.md) (auto-generate after build) or the [`antel analyze`](../commands.md) command
 - How report fields relate to the build directory: [build directory layout](../configuration.md)
-- Other example: `demos/antelstats` also ships `app_app/report.html` (the consumer-side report of a versioned shared library)
+- Other example: `demos/antelstats` also ships `.antel/build/app_app/report.html` (the consumer-side report of a versioned shared library)

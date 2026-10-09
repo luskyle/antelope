@@ -1,0 +1,11 @@
+{
+    "projectName": "cJSON_test",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [{"url": "https://github.com/DaveGamble/cJSON.git", "branch": "master", "name": "cjson"}],
+    "source": [".antel/refs/cjson/test.c"],
+    "include_directories": [],
+    "compile_args": ["-O2", "-Wall", "-std=c89", "-I.antel/refs/cjson"],
+    "link_args": [".antel/build/cjson_shared/libcjson.so", "-lm"],
+    "rpath": ["$ORIGIN/../cjson_shared"]
+}

@@ -43,7 +43,7 @@ def test_data_files_copied_into_output_dir(project):
     write_config(project, data_files=['assets'])
 
     assert antel('rebuild').exit_code == 0
-    copied = project / 'demo_antel' / 'assets' / 'hello.txt'
+    copied = project / '.antel' / 'build' / 'demo_antel' / 'assets' / 'hello.txt'
     assert copied.exists()
     assert copied.read_text() == 'hello resource\n'
 
@@ -146,7 +146,7 @@ def test_resource_change_without_source_change_still_relinks(project):
     assert run_program(project) == 'v1'
 
     # 基线稳定后：不改任何东西，build 应为无改动（可执行文件不被重写）
-    program = project / 'demo_antel' / 'demo'
+    program = project / '.antel' / 'build' / 'demo_antel' / 'demo'
     before = program.stat().st_mtime_ns
     assert antel('build').exit_code == 0
     assert program.stat().st_mtime_ns == before, '无改动时不应重链接'
@@ -165,7 +165,7 @@ def test_clean_removes_copied_resources(project):
     write_config(project, data_files=['assets'], embed=['assets/hello.txt'])
 
     assert antel('rebuild').exit_code == 0
-    assert (project / 'demo_antel').exists()
+    assert (project / '.antel' / 'build' / 'demo_antel').exists()
 
     assert antel('clean').exit_code == 0
-    assert not (project / 'demo_antel').exists()
+    assert not (project / '.antel' / 'build' / 'demo_antel').exists()

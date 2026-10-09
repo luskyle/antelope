@@ -44,8 +44,8 @@ cd demos/libpng
 antel fetch-ref -f static
 antel rebuild -f static
 antel rebuild -f shared
-ar t png16_static/libpng16.a | wc -l
-readelf -d png16_shared/libpng16.so.16.60.git | grep SONAME
+ar t .antel/build/png16_static/libpng16.a | wc -l
+readelf -d .antel/build/png16_shared/libpng16.so.16.60.git | grep SONAME
 ```
 
 `ref` shallow-clones the upstream `libpng16` branch into `.antel/refs/libpng/`.
@@ -70,8 +70,8 @@ are ready but before incremental scanning and compilation:
     {
       "command": ["python3", "prepare_libpng.py"],
       "outputs": [
-        "build/libpng-generated/pnglibconf.h",
-        "build/libpng-generated/libpng.vers"
+        ".antel/build/libpng-generated/pnglibconf.h",
+        ".antel/build/libpng-generated/libpng.vers"
       ]
     }
   ]
@@ -93,14 +93,14 @@ these library targets. See [Configuration](configuration.md#before_build).
 ## Versioned Shared Library
 
 ```text
-png16_shared/
+.antel/build/png16_shared/
   libpng16.so.16.60.git
   libpng16.so.16 -> libpng16.so.16.60.git
   libpng16.so -> libpng16.so.16.60.git
 ```
 
 The SONAME is `libpng16.so.16`. The config declares `version: "16.60.git"` and
-passes `-Wl,--version-script=build/libpng-generated/libpng.vers` to the linker.
+passes `-Wl,--version-script=.antel/build/libpng-generated/libpng.vers` to the linker.
 
 ## A Window Using the Built so
 
@@ -111,8 +111,8 @@ image dimensions, zoom, and the loaded libpng version.
 
 ```bash
 antel rebuild -f pngviewer
-./pngviewer_pngviewer/pngviewer
-./pngviewer_pngviewer/pngviewer /path/to/image.png
+./.antel/build/pngviewer_pngviewer/pngviewer
+./.antel/build/pngviewer_pngviewer/pngviewer /path/to/image.png
 ```
 
 GTK 3 provides the window, chooser, and drawing surface. PNG decoding directly
@@ -125,11 +125,11 @@ checkerboard. Invalid images leave the current image intact. Limits are 16384
 pixels per dimension and 256 MiB of decoded RGBA data.
 
 ```bash
-ldd pngviewer_pngviewer/pngviewer | grep libpng
-./pngviewer_pngviewer/pngviewer --smoke-test
+ldd .antel/build/pngviewer_pngviewer/pngviewer | grep libpng
+./.antel/build/pngviewer_pngviewer/pngviewer --smoke-test
 ```
 
-The verified loader path points to `png16_shared/libpng16.so.16`; the logo decodes
+The verified loader path points to `.antel/build/png16_shared/libpng16.so.16`; the logo decodes
 to `512 x 512`. The smoke test renders a window, saves its capture to
 `/tmp/antel-pngviewer.png`, and exits.
 
@@ -191,8 +191,8 @@ done
 for target in example-iccfrompng example-pngpixel example-pngtopng example-simpleover; do
     antel rebuild -f "$target"
 done
-./pngtest_pngtest/pngtest pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
-./pngvalid_pngvalid/pngvalid --gamma-16-to-8
+./.antel/build/pngtest_pngtest/pngtest .antel/build/pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
+./.antel/build/pngvalid_pngvalid/pngvalid --gamma-16-to-8
 ```
 
 See [Examples](examples.md#libpng-staticshared-targets-ref) and the demo README for

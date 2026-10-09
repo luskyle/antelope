@@ -46,10 +46,10 @@ Location: `demos/gtkcalc/`. A calculator written with libadwaita (GTK 4), demons
   ```bash
   cd demos/gtkcalc
   antel rebuild
-  ./gtkcalc_antel/gtkcalc
+  ./.antel/build/gtkcalc_antel/gtkcalc
   ```
 
-- The program also takes `--auto-close N` (seconds) for unattended verification — e.g. `./gtkcalc_antel/gtkcalc --auto-close 3` in CI opens the window and exits on its own after 3 seconds
+- The program also takes `--auto-close N` (seconds) for unattended verification — e.g. `./.antel/build/gtkcalc_antel/gtkcalc --auto-close 3` in CI opens the window and exits on its own after 3 seconds
 
 !!! note "libadwaita 1.1 API constraints (code already adapted)"
     This demo targets libadwaita 1.1 / GTK 4.6 as shipped with Ubuntu 22.04. Three pitfalls trip up newcomers, all commented in the source:
@@ -149,18 +149,18 @@ demos/resdemo/
 ```bash
 cd demos/resdemo
 antel rebuild
-./resdemo_antel/resdemo
+./.antel/build/resdemo_antel/resdemo
 ```
 
 The switch at the bottom-left toggles dark/light theme (colors from `style.css` compiled in via gresource); the button on the right re-reads the `data_files` banner from disk — both interactions demonstrate "change a resource → build → the UI follows".
 
 ### Logs & build artifact analysis
 
-Every stage of a build lands an auditable artifact, and `antel analyze` folds them all into one visual report. This is what the `demos/resdemo/resdemo_antel/log/` directory actually contains after a build:
+Every stage of a build lands an auditable artifact, and `antel analyze` folds them all into one visual report. This is what the `demos/resdemo/.antel/build/resdemo_antel/log/` directory actually contains after a build:
 
 | File | Contents |
 | --- | --- |
-| `resdemo.gxx` | the full compile commands executed (`gcc ... -I/usr/include/libadwaita-1 ... -o resdemo_antel/obj/src_main.o`) |
+| `resdemo.gxx` | the full compile commands executed (`gcc ... -I/usr/include/libadwaita-1 ... -o .antel/build/resdemo_antel/obj/src_main.o`) |
 | `resdemo.make` | full output when running through the make backend (whether compiles were skipped/rebuilt) |
 | `antel.mk` | internal rule file (generated — don't hand-edit; `make -f` reproduces the same compile) |
 | `resdemo_link.sh` | the link script — linking *is* running this script; read `-ladwaita-1 -lgtk-4 ...` and all library deps ahead of time |
@@ -168,7 +168,7 @@ Every stage of a build lands an auditable artifact, and `antel analyze` folds th
 | `hashes` | hash baseline recording every input file and its md5 from the last successful build |
 | `report.html` | the visual analysis report produced by `antel analyze` (self-contained single file, open in a browser) |
 
-**Walk through resdemo with the report** (run `antel analyze`, then open `resdemo_antel/report.html`):
+**Walk through resdemo with the report** (run `antel analyze`, then open `.antel/build/resdemo_antel/report.html`):
 
 - **Resources**: expanded to file level — 10 resource files, `data_files` 3 items (banner.txt/logo.png/payload.bin with type & size), `gresource` 6 items (XML + main.ui/style.css/logo.png/notes.txt + the generated `gresource.c` at 142.3 KB), `embed` 1 item (payload.bin 128 B + `_binary_assets_payload_bin` symbol); each resource carries a ✓ copied/embedded/compiled-in status
 - **Symbol table**: 98 symbols classified by nm kind (functions/data/BSS/undefined references), `t exec_dir`, `T main` and friends each in their own chip
@@ -198,25 +198,40 @@ antel rebuild
 ```
 
 The upstream source is cached under `.antel/refs/libyaml`, and the static library
-is written to `yaml_antel/libyaml.a`. `antel clean` preserves the reference
+is written to `.antel/build/yaml_antel/libyaml.a`. `antel clean` preserves the reference
 checkout.
 
 ## cJSON: public JSON library (`ref`)
 
 Location: `demos/cjson/`. This demo fetches the public cJSON `master` branch
-through `ref` and builds the parser and JSON Utils as a static library, without
-adding a local consumer.
+through `ref` and builds separate static/shared parser and JSON Utils libraries,
+upstream Unity, `cJSON_test`, `parse_examples` and `old_utils_tests`: eight
+targets, without a local entry point or a CMake invocation.
 
 ```bash
 cd demos/cjson
 antel fetch-ref
 antel rebuild
-ar t cjson_antel/libcjson.a
+for config in shared utils-static utils-shared unity demo parse-examples utils-tests; do
+    antel rebuild -f "$config" || exit 1
+done
+ar t .antel/build/cjson_antel/libcjson.a
+./.antel/build/cJSON_test_demo/cJSON_test
+(cd .antel/build/parse_examples_parse-examples && ./parse_examples)
+./.antel/build/old_utils_tests_utils-tests/old_utils_tests
 ```
 
 The first run needs Git and network access. The source is cached under
 `.antel/refs/cjson`; `antel rebuild` also downloads a missing reference before
 compilation.
+Fetch first so that `data_files` can deploy the upstream parsing fixtures.
+Run the parsing executable from its output directory. The two test programs
+verify 15 parsing cases and six Utils test groups, loading locally built shared
+libraries through relative rpaths. Build configuration dependencies in the
+order shown above. This is a representative subset, not the complete upstream
+test or fuzzing suite. See
+[`demos/cjson/README.md`](https://github.com/luskyle/antelope/blob/main/demos/cjson/README.md)
+for the target list and version notes.
 
 ## libpng: static/shared targets (`ref`)
 
@@ -237,8 +252,8 @@ antel fetch-ref -f static
 python3 prepare_icc_fixture.py
 antel rebuild -f static
 antel rebuild -f shared
-ar t png16_static/libpng16.a | wc -l
-readelf -d png16_shared/libpng16.so.16.60.git | grep SONAME
+ar t .antel/build/png16_static/libpng16.a | wc -l
+readelf -d .antel/build/png16_shared/libpng16.so.16.60.git | grep SONAME
 ```
 
 Each library target contains 17 upstream objects. The shared artifact is
@@ -261,14 +276,14 @@ done
 Representative runs use test inputs shipped in the fetched upstream tree:
 
 ```bash
-./pngtest_pngtest/pngtest pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
-./pnggetset_pnggetset/pnggetset
-./pngvalid_pngvalid/pngvalid --gamma-16-to-8
-./pngunknown_pngunknown/pngunknown --strict default=discard pngunknown_pngunknown/testdata/pngtest.png
-./pngimage_pngimage/pngimage --list-combos --log pngimage_pngimage/testdata/pngsuite/basn0g08.png
-./pngstest_pngstest/pngstest --log --tmpfile /tmp/ps- pngstest_pngstest/testdata/testpngs/gray-1.png
-./pngfix_pngfix/pngfix --quiet pngfix_pngfix/testdata/pngtest.png
-./png-fix-itxt_png-fix-itxt/png-fix-itxt < png-fix-itxt_png-fix-itxt/testdata/pngtest.png > /tmp/png-fixed.png
+./.antel/build/pngtest_pngtest/pngtest .antel/build/pngtest_pngtest/testdata/pngtest.png /tmp/png-roundtrip.png
+./.antel/build/pnggetset_pnggetset/pnggetset
+./.antel/build/pngvalid_pngvalid/pngvalid --gamma-16-to-8
+./.antel/build/pngunknown_pngunknown/pngunknown --strict default=discard .antel/build/pngunknown_pngunknown/testdata/pngtest.png
+./.antel/build/pngimage_pngimage/pngimage --list-combos --log .antel/build/pngimage_pngimage/testdata/pngsuite/basn0g08.png
+./.antel/build/pngstest_pngstest/pngstest --log --tmpfile /tmp/ps- .antel/build/pngstest_pngstest/testdata/testpngs/gray-1.png
+./.antel/build/pngfix_pngfix/pngfix --quiet .antel/build/pngfix_pngfix/testdata/pngtest.png
+./.antel/build/png-fix-itxt_png-fix-itxt/png-fix-itxt < .antel/build/png-fix-itxt_png-fix-itxt/testdata/pngtest.png > /tmp/png-fixed.png
 ```
 
 Four additional programs from `contrib/examples/` also have configs:
@@ -279,10 +294,10 @@ Four additional programs from `contrib/examples/` also have configs:
 for target in example-iccfrompng example-pngpixel example-pngtopng example-simpleover; do
     antel rebuild -f "$target"
 done
-./iccfrompng_example-iccfrompng/iccfrompng iccfrompng_example-iccfrompng/testdata/icc-profile.png
-./pngpixel_example-pngpixel/pngpixel 0 0 pngpixel_example-pngpixel/testdata/pngtest.png
-./pngtopng_example-pngtopng/pngtopng pngtopng_example-pngtopng/testdata/pngtest.png /tmp/pngtopng.png
-./simpleover_example-simpleover/simpleover simpleover_example-simpleover/testdata/background.png /tmp/simpleover.png
+./.antel/build/iccfrompng_example-iccfrompng/iccfrompng .antel/build/iccfrompng_example-iccfrompng/testdata/icc-profile.png
+./.antel/build/pngpixel_example-pngpixel/pngpixel 0 0 .antel/build/pngpixel_example-pngpixel/testdata/pngtest.png
+./.antel/build/pngtopng_example-pngtopng/pngtopng .antel/build/pngtopng_example-pngtopng/testdata/pngtest.png /tmp/pngtopng.png
+./.antel/build/simpleover_example-simpleover/simpleover .antel/build/simpleover_example-simpleover/testdata/background.png /tmp/simpleover.png
 ```
 
 ## yaml-cpp: C++ YAML library (`ref`)
@@ -294,29 +309,39 @@ consumer.
 ```bash
 cd demos/yaml-cpp
 antel rebuild
-ar t yaml-cpp_antel/libyaml-cpp.a | wc -l
+ar t .antel/build/yaml-cpp_antel/libyaml-cpp.a | wc -l
 ```
 
 The first build requires Git and network access.
 
-## json-c: JSON library (`ref` and CMake configure)
+## json-c: library, CLI and test targets (`ref` and Python feature probes)
 
-Location: `demos/json-c/`. json-c needs platform-probed generated headers. CMake
-is used for configuration only; Antel compiles the 14 production C files into a
-static archive. No CMake build is run.
+Location: `demos/json-c/`. json-c needs platform-probed generated headers. Each
+Antel configuration uses `before_build` to invoke `prepare_json_c.py`; the
+script probes the host C compiler and writes the headers directly. No CMake
+configuration or build is used. Antel builds the static/shared
+libraries, the upstream `json_parse` app and three representative parser, JSON
+Pointer and JSON Patch tests.
 
 ```bash
 cd demos/json-c
 antel fetch-ref
-cmake -S .antel/refs/json-c -B build/json-c-config \
-    -DBUILD_TESTING=OFF -DBUILD_APPS=OFF \
-    -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON \
-    -DDISABLE_EXTRA_LIBS=ON
 antel rebuild
-ar t json-c_antel/libjson-c.a | wc -l
+for config in shared json-parse test-parse test-json-pointer test-json-patch; do
+    antel rebuild -f "$config" || exit 1
+done
+ar t .antel/build/json-c_antel/libjson-c.a | wc -l
+printf '{"library":"json-c","built_by":"Antel"}\n' | ./.antel/build/json_parse_json-parse/json_parse
+TEST_PARSE_CHUNKSIZE=7 ./.antel/build/test_parse_test-parse/test_parse
+./.antel/build/test_json_pointer_test-json-pointer/test_json_pointer
+./.antel/build/test_json_patch_test-json-patch/test_json_patch .antel/build/test_json_patch_test-json-patch/testdata
 ```
 
-The archive includes JSON Pointer and JSON Patch support.
+Both libraries use the same 14 upstream translation units. Tests load the
+locally built shared library through relative rpaths, and the JSON Patch fixtures
+are deployed with `data_files`. See
+[`demos/json-c/README.md`](https://github.com/luskyle/antelope/blob/main/demos/json-c/README.md)
+for all targets.
 
 ## libuv: Linux event loop (`ref`)
 
@@ -327,7 +352,7 @@ macOS implementations and producing a static archive without a local consumer.
 ```bash
 cd demos/libuv
 antel rebuild
-ar t uv_antel/libuv.a | wc -l
+ar t .antel/build/uv_antel/libuv.a | wc -l
 ```
 
 This demo targets Linux; consumers must link pthread, dl, and rt.
@@ -342,12 +367,12 @@ compiles the 196 upstream sources into a static archive.
 ```bash
 cd demos/libgit2
 antel fetch-ref -f refs
-cmake -S .antel/refs/libgit2 -B build/libgit2-config \
+cmake -S .antel/refs/libgit2 -B .antel/build/libgit2-config \
     -DBUILD_TESTS=OFF -DBUILD_CLI=OFF -DBUILD_EXAMPLES=OFF \
     -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 python3 prepare_antelope.py
 antel rebuild -f generated
-ar t git2_generated/libgit2.a | wc -l
+ar t .antel/build/git2_generated/libgit2.a | wc -l
 ```
 
 CMake only configures; it does not compile. The archive uses system OpenSSL,
@@ -390,7 +415,7 @@ The output directory holds `libantelstats.so.1.0.0` (the real file) plus two sym
     "compiler": "gxx",
     "source": ["src/main.c"],
     "compile_args": ["-O2", "-Wall", "-Isrc"],
-    "link_args": ["-Lantelstats_antel", "-lantelstats"],
+    "link_args": ["-L.antel/build/antelstats_antel", "-lantelstats"],
     "report": false,
     "rpath": ["$ORIGIN/../antelstats_antel"]
 }
@@ -399,7 +424,7 @@ The output directory holds `libantelstats.so.1.0.0` (the real file) plus two sym
 Key point: `.c` files inside `include_directories` participate in the build (by design), so a project consuming the library should **only use `-I` for headers and never point `include_directories` into the library source dir**, or the library gets statically recompiled into the consumer. The `$ORIGIN` in `rpath` expands to the executable's own directory at runtime, so `ldd` loads by SONAME:
 
 ```text
-libantelstats.so.1 => .../antelstats_antel/libantelstats.so.1
+libantelstats.so.1 => .../.antel/build/antelstats_antel/libantelstats.so.1
 ```
 
 Build & run (two commands, no external input):
@@ -407,8 +432,8 @@ Build & run (two commands, no external input):
 ```bash
 cd demos/antelstats
 antel rebuild                 # versioned shared library + symlinks
-antel rebuild -f app && ./app_app/app          # embedded data prints the stats report
-antel analyze -f app          # generate the visual report app_app/report.html
+antel rebuild -f app && ./.antel/build/app_app/app          # embedded data prints the stats report
+antel analyze -f app          # generate the visual report .antel/build/app_app/report.html
 ```
 
 !!! note "How to use sanitize / coverage"

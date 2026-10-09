@@ -9,12 +9,12 @@ Run from this directory. CMake configures but does not build libgit2:
 
 ```bash
 antel fetch-ref -f refs
-cmake -S .antel/refs/libgit2 -B build/libgit2-config \
+cmake -S .antel/refs/libgit2 -B .antel/build/libgit2-config \
   -DBUILD_TESTS=OFF -DBUILD_CLI=OFF -DBUILD_EXAMPLES=OFF \
   -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 python3 prepare_antelope.py
 antel rebuild -f generated
-ar t git2_generated/libgit2.a | wc -l
+ar t .antel/build/git2_generated/libgit2.a | wc -l
 ```
 
 The generated config records the source files and compile definitions selected by

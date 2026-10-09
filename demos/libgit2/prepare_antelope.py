@@ -5,14 +5,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 REF_DIR = ROOT / '.antel' / 'refs' / 'libgit2'
-BUILD_DIR = ROOT / 'build' / 'libgit2-config'
+BUILD_DIR = ROOT / '.antel' / 'build' / 'libgit2-config'
 COMPILE_DATABASE = BUILD_DIR / 'compile_commands.json'
 
 
 def map_include(path):
     resolved = Path(path).resolve()
     for base, prefix in ((REF_DIR, '.antel/refs/libgit2'),
-                         (BUILD_DIR, 'build/libgit2-config')):
+                         (BUILD_DIR, '.antel/build/libgit2-config')):
         try:
             relative = resolved.relative_to(base)
             return f'-I{prefix}/{relative.as_posix()}'

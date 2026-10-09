@@ -13,8 +13,8 @@
         {
             "command": ["python3", "prepare_libpng.py"],
             "outputs": [
-                "build/libpng-generated/pnglibconf.h",
-                "build/libpng-generated/libpng.vers"
+                ".antel/build/libpng-generated/pnglibconf.h",
+                ".antel/build/libpng-generated/libpng.vers"
             ]
         }
     ],
@@ -43,11 +43,11 @@
         "-Wall",
         "-fPIC",
         "-DPNG_INTEL_SSE_OPT=1",
-        "-Ibuild/libpng-generated",
+        "-I.antel/build/libpng-generated",
         "-I.antel/refs/libpng"
     ],
     "link_args": [
-        "-Wl,--version-script=build/libpng-generated/libpng.vers"
+        "-Wl,--version-script=.antel/build/libpng-generated/libpng.vers"
     ],
     "pkg_config": [
         "zlib"

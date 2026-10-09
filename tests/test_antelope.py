@@ -30,7 +30,7 @@ def test_header_change_is_rebuilt(project):
     assert run_program(project) == 'foo2 bar2'
 
     # 没有改动时不重编
-    obj_file = project / 'demo_antel' / 'obj' / 'src_main.o'
+    obj_file = project / '.antel' / 'build' / 'demo_antel' / 'obj' / 'src_main.o'
     before = obj_file.stat().st_mtime_ns
     assert CliRunner().invoke(main, ['build']).exit_code == 0
     assert obj_file.stat().st_mtime_ns == before
@@ -45,7 +45,7 @@ def test_compile_error_exits_nonzero(project):
     assert result.exit_code != 0
     assert '命令执行失败' in result.output
     assert '链接完毕' not in result.output
-    assert not (project / 'demo_antel' / 'demo').exists()
+    assert not (project / '.antel' / 'build' / 'demo_antel' / 'demo').exists()
 
 
 def test_link_args_are_not_evaluated(project):
@@ -75,11 +75,11 @@ def test_parallel_and_serial_artifacts_match(project):
 
     write_config(project, source=source, jobs=1)
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
-    serial_bytes = (project / 'demo_antel' / 'demo').read_bytes()
+    serial_bytes = (project / '.antel' / 'build' / 'demo_antel' / 'demo').read_bytes()
 
     write_config(project, source=source, jobs=4)
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
-    parallel_bytes = (project / 'demo_antel' / 'demo').read_bytes()
+    parallel_bytes = (project / '.antel' / 'build' / 'demo_antel' / 'demo').read_bytes()
 
     assert serial_bytes == parallel_bytes
 
@@ -88,21 +88,21 @@ def test_compile_commands_json_is_written(project):
     """构建后应产出 clangd 可用的 compile_commands.json"""
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
 
-    entries = json.loads((project / 'demo_antel' / 'compile_commands.json').read_text())
+    entries = json.loads((project / '.antel' / 'build' / 'demo_antel' / 'compile_commands.json').read_text())
 
     assert len(entries) == 1
     assert entries[0]['file'] == 'src/main.c'
     assert entries[0]['directory'] == str(project)
     assert entries[0]['arguments'][0] in ('gcc', 'g++')
     assert '-c' in entries[0]['arguments']
-    assert entries[0]['output'] == 'demo_antel/obj/src_main.o'
+    assert entries[0]['output'] == '.antel/build/demo_antel/obj/src_main.o'
 
 
 def test_compile_commands_can_be_disabled(project):
     write_config(project, compile_commands=False)
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
 
-    assert not (project / 'demo_antel' / 'compile_commands.json').exists()
+    assert not (project / '.antel' / 'build' / 'demo_antel' / 'compile_commands.json').exists()
 
 
 def test_source_path_with_spaces(project):
@@ -139,10 +139,10 @@ def test_make_backend_builds_with_rule_file(project):
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
     assert run_program(project) == 'foo1 bar1'
 
-    text = (project / 'demo_antel' / 'log' / 'antel.mk').read_text()
+    text = (project / '.antel' / 'build' / 'demo_antel' / 'log' / 'antel.mk').read_text()
     assert '请勿手改' in text
-    assert 'demo_antel/obj/src_main.o: src/main.c' in text
-    assert '-include demo_antel/obj/src_main.o.d' in text
+    assert '.antel/build/demo_antel/obj/src_main.o: src/main.c' in text
+    assert '-include .antel/build/demo_antel/obj/src_main.o.d' in text
 
     # 项目根不应多出 Makefile
     assert not (project / 'Makefile').exists()
@@ -169,7 +169,7 @@ def test_make_backend_is_not_fooled_by_mtime(project):
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
 
     (project / 'inc' / 'bar.h').write_text('#define BAR_MSG "bar3"\n')
-    os.utime(project / 'demo_antel' / 'obj' / 'src_main.o')
+    os.utime(project / '.antel' / 'build' / 'demo_antel' / 'obj' / 'src_main.o')
 
     assert CliRunner().invoke(main, ['build']).exit_code == 0
 
@@ -198,14 +198,14 @@ def test_make_backend_failure_exits_nonzero(project):
     assert result.exit_code != 0
     assert '规则文件' in result.output
     assert '链接完毕' not in result.output
-    assert not (project / 'demo_antel' / 'demo').exists()
+    assert not (project / '.antel' / 'build' / 'demo_antel' / 'demo').exists()
 
 
 def test_auto_backend_uses_make(project):
     """backend 默认 auto：机器上有 make 就走 make"""
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
 
-    assert (project / 'demo_antel' / 'log' / 'antel.mk').exists()
+    assert (project / '.antel' / 'build' / 'demo_antel' / 'log' / 'antel.mk').exists()
     assert run_program(project) == 'foo1 bar1'
 
 
@@ -216,15 +216,15 @@ def test_auto_backend_falls_back_without_make(project, monkeypatch):
     因此这里断言行为（规则文件是否生成、产物是否一致），不断言提示文本
     """
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
-    with_make = (project / 'demo_antel' / 'demo').read_bytes()
-    assert (project / 'demo_antel' / 'log' / 'antel.mk').exists()
+    with_make = (project / '.antel' / 'build' / 'demo_antel' / 'demo').read_bytes()
+    assert (project / '.antel' / 'build' / 'demo_antel' / 'log' / 'antel.mk').exists()
 
     monkeypatch.setattr('antelope.antelope.makeAvailable', lambda: False)
     assert CliRunner().invoke(main, ['rebuild']).exit_code == 0
 
     # rebuild 会重建 log/，规则文件不再出现即说明没有走 make
-    assert not (project / 'demo_antel' / 'log' / 'antel.mk').exists()
-    assert (project / 'demo_antel' / 'demo').read_bytes() == with_make
+    assert not (project / '.antel' / 'build' / 'demo_antel' / 'log' / 'antel.mk').exists()
+    assert (project / '.antel' / 'build' / 'demo_antel' / 'demo').read_bytes() == with_make
     assert describeBackend('auto') == 'auto → antel（未找到 make）'
 
 

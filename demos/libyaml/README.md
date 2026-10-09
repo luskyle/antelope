@@ -10,7 +10,7 @@ Run from this directory; the first build needs network access and Git:
 antel rebuild
 ```
 
-The resulting library is `yaml_antel/libyaml.a`. The upstream CMake build
+The resulting library is `.antel/build/yaml_antel/libyaml.a`. The upstream CMake build
 generates `config.h` only to provide version macros; this demo passes those
 macros directly to the compiler, so no CMake setup is needed. The reference
 checkout is cached under `.antel/refs/libyaml` and is preserved by `antel clean`.

@@ -1,0 +1,7 @@
+/build/
+/json-c_shared/
+/test_parse_test-parse/
+/json_parse_json-parse/
+/test_json_parse_test-parse/
+/test_json_pointer_test-json-pointer/
+/test_json_patch_test-json-patch/

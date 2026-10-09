@@ -443,7 +443,7 @@ def parseJsonConfig(file:str='antel'):
 
     antel.project_name = readProjectName(config)
 
-    antel.output_dir = f'{antel.project_name}_{file}'
+    antel.output_dir = f'.antel/build/{antel.project_name}_{file}'
     print('项目名：' + antel.project_name)
 
     antel.source = readList(config, 'source')

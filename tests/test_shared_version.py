@@ -45,7 +45,7 @@ def test_versioned_shared_lib_artifacts(project):
 
     assert result.exit_code == 0, result.output
 
-    out = project / 'demo_antel'
+    out = project / '.antel' / 'build' / 'demo_antel'
     real = out / 'libdemo.so.1.0.0'
     by_major = out / 'libdemo.so.1'
     by_plain = out / 'libdemo.so'
@@ -72,7 +72,7 @@ def test_explicit_soname_wins(project):
     write_shared_project(project, version='2.3.4', soname='libcustom.so.2')
     assert antel('rebuild').exit_code == 0
 
-    out = project / 'demo_antel'
+    out = project / '.antel' / 'build' / 'demo_antel'
     real = out / 'libdemo.so.2.3.4'
     readelf = subprocess.run(['readelf', '-d', str(real)],
                              capture_output=True, text=True).stdout
@@ -88,7 +88,7 @@ def test_consumer_links_by_soname_and_runs_with_rpath(project):
     write_shared_project(project, version='1.0.0')
     assert antel('rebuild').exit_code == 0
 
-    out = project / 'demo_antel'
+    out = project / '.antel' / 'build' / 'demo_antel'
 
     # 第二个配置：可执行程序，链接上面的库（-L 指向输出目录，-l demo）
     (project / 'main.c').write_text(
@@ -103,7 +103,7 @@ def test_consumer_links_by_soname_and_runs_with_rpath(project):
         'exclude_source': [],
         'include_directories': [],
         'compile_args': ['-w'],
-        'link_args': ['-Ldemo_antel', '-ldemo'],
+        'link_args': ['-L.antel/build/demo_antel', '-ldemo'],
         'rpath': ['$ORIGIN/../demo_antel'],
     }
     import json
@@ -111,13 +111,13 @@ def test_consumer_links_by_soname_and_runs_with_rpath(project):
     assert antel('rebuild', '-f', 'consumer').exit_code == 0
 
     # 正常跑：rpath 指向库所在目录，运行时按 SONAME 找到 libdemo.so.1
-    run = subprocess.run([str(project / 'consumer_consumer' / 'consumer')],
+    run = subprocess.run([str(project / '.antel' / 'build' / 'consumer_consumer' / 'consumer')],
                          capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     assert run.stdout.strip() == 'via-lib=42'
 
     # 读动态依赖应记录 SONAME 而非文件名
-    ldd = subprocess.run(['ldd', str(project / 'consumer_consumer' / 'consumer')],
+    ldd = subprocess.run(['ldd', str(project / '.antel' / 'build' / 'consumer_consumer' / 'consumer')],
                          capture_output=True, text=True).stdout
     assert 'libdemo.so.1' in ldd
 
@@ -126,10 +126,10 @@ def test_clean_removes_version_links(project):
     """clean 回收含软链的整个输出目录"""
     write_shared_project(project, version='1.0.0')
     assert antel('rebuild').exit_code == 0
-    assert (project / 'demo_antel').exists()
+    assert (project / '.antel' / 'build' / 'demo_antel').exists()
 
     antel('clean')
-    assert not (project / 'demo_antel').exists()
+    assert not (project / '.antel' / 'build' / 'demo_antel').exists()
 
 
 def test_static_library_links_successfully(project):
@@ -143,7 +143,7 @@ def test_static_library_links_successfully(project):
     result = antel('rebuild')
 
     assert result.exit_code == 0, result.output
-    archive = project / 'demo_antel' / 'libdemo.a'
+    archive = project / '.antel' / 'build' / 'demo_antel' / 'libdemo.a'
     assert archive.exists()
     # 归档里应包含目标文件与符号
     listing = subprocess.run(['ar', '-t', str(archive)],
