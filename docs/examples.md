@@ -361,6 +361,12 @@ antel rebuild -f benchmarks
 上游 examples、demos 的 Antel 目标 JSON。目标分别声明同一个上游 ref；只编译可移植核心与
 UI 模块，排除平台显示/输入驱动和可选第三方 codec，不依赖窗口系统，也不调用 CMake。
 
+![LVGL 窗体 Demo：Antelope 构建概览](images/demo_lvgl_overview.png)
+
+![LVGL 窗体 Demo：构建性能页面](images/demo_lvgl_performance.png)
+
+![LVGL 窗体 Demo：控件展厅](images/demo_lvgl_components.png)
+
 ```bash
 cd demos/lvgl
 antel fetch-ref -f static

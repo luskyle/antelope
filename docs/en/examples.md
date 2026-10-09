@@ -376,6 +376,12 @@ core libraries plus static archives for examples and demos, excluding
 platform display/input drivers and optional third-party codecs; no window system
 or CMake is required.
 
+![LVGL desktop demo: Antelope build overview](images/demo_lvgl_overview.png)
+
+![LVGL desktop demo: build performance dashboard](images/demo_lvgl_performance.png)
+
+![LVGL desktop demo: interactive component gallery](images/demo_lvgl_components.png)
+
 ```bash
 cd demos/lvgl
 antel fetch-ref -f static

@@ -266,14 +266,14 @@ static void create_dashboard(void)
     nav_buttons[2] = make_nav_button(sidebar, "Components", 157, 2);
 
     lv_obj_t *bottom_card = make_panel(sidebar, 14, 492, 164, 92, 0x141F32);
-    make_label(bottom_card, "ANTELOPE STATUS", 14, 14, 0x8290A7);
+    make_label(bottom_card, "BUILD STATUS", 14, 14, 0x8290A7);
     make_label(bottom_card, "Build plan ready", 14, 40, 0xE6EDF8);
     lv_obj_t *ready_dot = lv_obj_create(bottom_card);
     lv_obj_set_size(ready_dot, 8, 8);
     lv_obj_set_pos(ready_dot, 14, 69);
     style_panel(ready_dot, 0x51D6B2);
     lv_obj_set_style_radius(ready_dot, LV_RADIUS_CIRCLE, 0);
-    make_label(bottom_card, "ref / compile / link", 30, 65, 0x8492A8);
+    make_label(bottom_card, "fetch / build", 30, 65, 0x8492A8);
 
     pages[0] = make_page(screen);
     pages[1] = make_page(screen);
@@ -330,7 +330,7 @@ static void create_dashboard(void)
 
     lv_obj_t *control = make_panel(overview, 568, 226, 276, 326, 0x131F32);
     make_section_title(control, "Explore Antel", 20, 16);
-    make_label(control, "Build commands stay composable.", 20, 50, 0x8290A7);
+    make_label(control, "Build steps stay simple.", 20, 50, 0x8290A7);
     make_label(control, "DEMO INTERACTIONS", 20, 82, 0x8290A7);
     click_count_label = make_label(control, "0", 20, 110, 0x51D6B2);
     lv_obj_set_style_text_font(click_count_label, &lv_font_montserrat_28, 0);
@@ -417,9 +417,9 @@ static void create_dashboard(void)
     make_label(health, "TARGET TYPES", 20, 63, 0x8290A7);
     make_label(health, "static / shared / exe", 20, 88, 0x51D6B2);
     make_label(health, "REF WORKFLOW", 20, 137, 0x8290A7);
-    make_label(health, "fetch branch-specific sources", 20, 162, 0x9AA8BD);
+    make_label(health, "fetch branch refs", 20, 162, 0x9AA8BD);
     make_label(health, "BUILD TOOLING", 20, 211, 0x8290A7);
-    make_label(health, "before_build / diagnostics", 20, 236, 0x72A8FF);
+    make_label(health, "hooks / diagnostics", 20, 236, 0x72A8FF);
     make_label(health, "No CMake required", 20, 277, 0xA181D0);
 
     lv_obj_t *components = pages[2];
@@ -429,7 +429,7 @@ static void create_dashboard(void)
 
     lv_obj_t *widget_card = make_panel(components, 16, 86, 398, 466, 0x131F32);
     make_section_title(widget_card, "Interactive controls", 20, 16);
-    make_label(widget_card, "Switches and checkboxes update app state.", 20, 49, 0x8290A7);
+    make_label(widget_card, "Switches and checkboxes control state.", 20, 49, 0x8290A7);
 
     lv_obj_t *live_switch = lv_switch_create(widget_card);
     lv_obj_set_pos(live_switch, 20, 98);
@@ -440,6 +440,7 @@ static void create_dashboard(void)
 
     lv_obj_t *checkbox = lv_checkbox_create(widget_card);
     lv_checkbox_set_text(checkbox, "Enable compact data labels");
+    lv_obj_set_style_text_color(checkbox, color(0xE6EDF8), LV_PART_MAIN);
     lv_obj_set_pos(checkbox, 20, 190);
     lv_obj_add_state(checkbox, LV_STATE_CHECKED);
     make_label(widget_card, "Checkable LVGL control", 20, 240, 0x8290A7);
@@ -466,7 +467,7 @@ static void create_dashboard(void)
 
     lv_obj_t *palette_card = make_panel(components, 430, 86, 414, 466, 0x131F32);
     make_section_title(palette_card, "Design system", 20, 16);
-    make_label(palette_card, "Surface, accent, status and data colors", 20, 49, 0x8290A7);
+    make_label(palette_card, "Interface color tokens", 20, 49, 0x8290A7);
 
     const uint32_t palette[] = {
         0x51D6B2, 0x72A8FF, 0xA181D0, 0xF4B860,
