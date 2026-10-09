@@ -5,8 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define WINDOW_WIDTH 1080
-#define WINDOW_HEIGHT 680
+#define DESIGN_WIDTH 1080
+#define DESIGN_HEIGHT 680
+#define UI_SCALE 384
+#define WINDOW_WIDTH ((DESIGN_WIDTH * UI_SCALE) / 256)
+#define WINDOW_HEIGHT ((DESIGN_HEIGHT * UI_SCALE) / 256)
 #define DRAW_BUFFER_LINES 48
 
 static SDL_Renderer *renderer;
@@ -53,6 +56,21 @@ static lv_obj_t *make_label(lv_obj_t *parent, const char *text, int x, int y,
     lv_label_set_text(label, text);
     lv_obj_set_style_text_color(label, color(text_color), 0);
     lv_obj_align(label, LV_ALIGN_TOP_LEFT, x, y);
+    return label;
+}
+
+static lv_obj_t *make_title(lv_obj_t *parent, const char *text, int x, int y)
+{
+    lv_obj_t *label = make_label(parent, text, x, y, 0xF1F5FC);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_32, 0);
+    return label;
+}
+
+static lv_obj_t *make_section_title(lv_obj_t *parent, const char *text,
+                                    int x, int y)
+{
+    lv_obj_t *label = make_label(parent, text, x, y, 0xF1F5FC);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
     return label;
 }
 
@@ -191,7 +209,7 @@ static lv_obj_t *make_nav_button(lv_obj_t *parent, const char *text, int y,
 static lv_obj_t *make_page(lv_obj_t *screen)
 {
     lv_obj_t *page = lv_obj_create(screen);
-    lv_obj_set_size(page, WINDOW_WIDTH - 210, WINDOW_HEIGHT - 80);
+    lv_obj_set_size(page, DESIGN_WIDTH - 210, DESIGN_HEIGHT - 80);
     lv_obj_set_pos(page, 210, 80);
     style_panel(page, 0x0A1020);
     lv_obj_set_style_radius(page, 0, 0);
@@ -200,13 +218,25 @@ static lv_obj_t *make_page(lv_obj_t *screen)
 
 static void create_dashboard(void)
 {
-    lv_obj_t *screen = lv_screen_active();
+    lv_obj_t *screen = lv_obj_create(lv_screen_active());
+    lv_obj_set_size(screen, DESIGN_WIDTH, DESIGN_HEIGHT);
+    lv_obj_set_pos(
+        screen,
+        (WINDOW_WIDTH - DESIGN_WIDTH) / 2,
+        (WINDOW_HEIGHT - DESIGN_HEIGHT) / 2
+    );
     lv_obj_set_style_bg_color(screen, color(0x0A1020), 0);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(screen, 0, 0);
+    lv_obj_set_style_pad_all(screen, 0, 0);
+    lv_obj_set_style_transform_pivot_x(screen, DESIGN_WIDTH / 2, 0);
+    lv_obj_set_style_transform_pivot_y(screen, DESIGN_HEIGHT / 2, 0);
+    lv_obj_set_style_transform_scale_x(screen, UI_SCALE, 0);
+    lv_obj_set_style_transform_scale_y(screen, UI_SCALE, 0);
     lv_obj_set_scrollable(screen, false);
 
     lv_obj_t *header = lv_obj_create(screen);
-    lv_obj_set_size(header, WINDOW_WIDTH, 68);
+    lv_obj_set_size(header, DESIGN_WIDTH, 68);
     lv_obj_set_pos(header, 0, 0);
     style_panel(header, 0x101A2D);
     lv_obj_set_style_radius(header, 0, 0);
@@ -225,7 +255,7 @@ static void create_dashboard(void)
     make_label(status, "LIVE", 25, 8, 0x71E0BB);
 
     lv_obj_t *sidebar = lv_obj_create(screen);
-    lv_obj_set_size(sidebar, 196, WINDOW_HEIGHT - 68);
+    lv_obj_set_size(sidebar, 196, DESIGN_HEIGHT - 68);
     lv_obj_set_pos(sidebar, 0, 68);
     style_panel(sidebar, 0x0E1728);
     lv_obj_set_style_radius(sidebar, 0, 0);
@@ -252,9 +282,9 @@ static void create_dashboard(void)
     lv_obj_set_hidden(pages[2], true);
 
     lv_obj_t *overview = pages[0];
-    make_label(overview, "Build with Antelope", 16, 16, 0xF1F5FC);
+    make_title(overview, "Build with Antelope", 16, 12);
     make_label(overview, "Describe sources and targets once. Antel resolves refs, compiles, and links.",
-               16, 44, 0x8D9BB2);
+               16, 54, 0x8D9BB2);
 
     lv_obj_t *card1 = make_panel(overview, 16, 86, 252, 120, 0x131F32);
     make_label(card1, "CONFIGURATION", 18, 17, 0x8290A7);
@@ -272,8 +302,8 @@ static void create_dashboard(void)
     make_label(card3, "Illustrative link-stage timing", 18, 82, 0xA181D0);
 
     lv_obj_t *chart = make_panel(overview, 16, 226, 536, 326, 0x131F32);
-    make_label(chart, "A declarative build pipeline", 20, 18, 0xF1F5FC);
-    make_label(chart, "Illustrative target activity / live LVGL rendering", 20, 43, 0x8290A7);
+    make_section_title(chart, "A declarative build pipeline", 20, 14);
+    make_label(chart, "Illustrative target activity / live LVGL rendering", 20, 46, 0x8290A7);
 
     lv_obj_t *chart_area = lv_obj_create(chart);
     lv_obj_set_size(chart_area, 484, 194);
@@ -299,10 +329,11 @@ static void create_dashboard(void)
     }
 
     lv_obj_t *control = make_panel(overview, 568, 226, 276, 326, 0x131F32);
-    make_label(control, "Explore Antel", 20, 20, 0xF1F5FC);
+    make_section_title(control, "Explore Antel", 20, 16);
     make_label(control, "Build commands stay composable.", 20, 50, 0x8290A7);
     make_label(control, "DEMO INTERACTIONS", 20, 82, 0x8290A7);
     click_count_label = make_label(control, "0", 20, 110, 0x51D6B2);
+    lv_obj_set_style_text_font(click_count_label, &lv_font_montserrat_28, 0);
 
     lv_obj_t *button = lv_button_create(control);
     lv_obj_set_size(button, 236, 46);
@@ -328,9 +359,9 @@ static void create_dashboard(void)
     lv_obj_add_event_cb(slider, on_slider_changed, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_t *performance = pages[1];
-    make_label(performance, "Build performance", 16, 16, 0xF1F5FC);
+    make_title(performance, "Build performance", 16, 12);
     make_label(performance, "An illustrative live view of Antel's parallel compile and link stages.",
-               16, 44, 0x8D9BB2);
+               16, 54, 0x8D9BB2);
 
     lv_obj_t *cpu_card = make_panel(performance, 16, 86, 398, 116, 0x131F32);
     make_label(cpu_card, "CPU UTILIZATION", 20, 17, 0x8290A7);
@@ -355,8 +386,8 @@ static void create_dashboard(void)
     lv_obj_set_style_bg_color(memory_bar, color(0x72A8FF), LV_PART_INDICATOR);
 
     lv_obj_t *history = make_panel(performance, 16, 222, 536, 330, 0x131F32);
-    make_label(history, "Build-stage activity", 20, 17, 0xF1F5FC);
-    make_label(history, "Illustrative CPU and memory / rolling samples", 20, 43, 0x8290A7);
+    make_section_title(history, "Build-stage activity", 20, 14);
+    make_label(history, "Illustrative CPU and memory / rolling samples", 20, 46, 0x8290A7);
     telemetry_chart = lv_chart_create(history);
     lv_obj_set_size(telemetry_chart, 488, 238);
     lv_obj_set_pos(telemetry_chart, 24, 78);
@@ -382,7 +413,7 @@ static void create_dashboard(void)
     lv_chart_refresh(telemetry_chart);
 
     lv_obj_t *health = make_panel(performance, 568, 222, 276, 330, 0x131F32);
-    make_label(health, "Antel capabilities", 20, 18, 0xF1F5FC);
+    make_section_title(health, "Antel capabilities", 20, 14);
     make_label(health, "TARGET TYPES", 20, 63, 0x8290A7);
     make_label(health, "static / shared / exe", 20, 88, 0x51D6B2);
     make_label(health, "REF WORKFLOW", 20, 137, 0x8290A7);
@@ -392,12 +423,12 @@ static void create_dashboard(void)
     make_label(health, "No CMake required", 20, 277, 0xA181D0);
 
     lv_obj_t *components = pages[2];
-    make_label(components, "LVGL component gallery", 16, 16, 0xF1F5FC);
+    make_title(components, "LVGL component gallery", 16, 12);
     make_label(components, "Live widgets, custom styling, charts, states and interaction.",
-               16, 44, 0x8D9BB2);
+               16, 54, 0x8D9BB2);
 
     lv_obj_t *widget_card = make_panel(components, 16, 86, 398, 466, 0x131F32);
-    make_label(widget_card, "Interactive controls", 20, 20, 0xF1F5FC);
+    make_section_title(widget_card, "Interactive controls", 20, 16);
     make_label(widget_card, "Switches and checkboxes update app state.", 20, 49, 0x8290A7);
 
     lv_obj_t *live_switch = lv_switch_create(widget_card);
@@ -434,7 +465,7 @@ static void create_dashboard(void)
     lv_obj_center(reset_label);
 
     lv_obj_t *palette_card = make_panel(components, 430, 86, 414, 466, 0x131F32);
-    make_label(palette_card, "Design system", 20, 20, 0xF1F5FC);
+    make_section_title(palette_card, "Design system", 20, 16);
     make_label(palette_card, "Surface, accent, status and data colors", 20, 49, 0x8290A7);
 
     const uint32_t palette[] = {

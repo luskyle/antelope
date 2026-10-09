@@ -392,16 +392,36 @@ The outputs are `.antel/build/lvgl_static/liblvgl.a` (386 objects),
 `.antel/build/lvgl_examples_examples/liblvgl_examples.a` (326 objects), and
 `.antel/build/lvgl_demos_demos/liblvgl_demos.a` (84 objects). The examples and
 demos are archives, not standalone executables; consumers also link the LVGL
-core library. The `before_build` hook runs `prepare_lv_conf.py` to generate an
-RGB565/no-OS configuration at `.antel/lvgl/lv_conf.h`.
-The SDL2 desktop app introduces Antelope and links
-`.antel/build/lvgl_static/liblvgl.a`. Its three interactive pages cover Antel's
-refs, `before_build`, incremental compilation, and target types; an illustrative
-build-activity monitor; and an LVGL widget gallery with a line chart, bars,
-buttons, sliders, switches, checkboxes, event callbacks, timers, and custom
-styles. The switch pauses/resumes metric updates and the slider adjusts their
-refresh interval. SDL2 development files and a desktop display are required;
-press Escape to quit.
+core library. Each library target declares the LVGL `release/v9.6` ref and
+maintains its source list in JSON; the build does not invoke CMake or its
+generated build system. `antel fetch-ref -f static` downloads the source to
+`.antel/refs/lvgl`, and `antel rebuild -f <target>` compiles and archives each
+configured target (`-f` takes the config name without `.json`).
+
+Each target's `before_build` hook runs `prepare_lv_conf.py` to generate
+`.antel/lvgl/lv_conf.h` without adding generated files to the source tree. The
+config selects RGB565, disables OS integration, uses the desktop libc
+allocator, and enables Montserrat fonts from 18px through 32px.
+
+The SDL2 desktop app is a separate consumer: build `static` before `window`.
+The `window` target links `.antel/build/lvgl_static/liblvgl.a` directly and
+gets SDL2 compile/link flags from `pkg-config`. It requires SDL2 development
+files, `pkg-config`, and a desktop display. Its three interactive pages are:
+
+- **Overview:** Antel's JSON targets, Git refs, `before_build`, incremental
+  builds, and target types, alongside an animated build chart, button, and
+  refresh-interval slider.
+- **Build performance:** an illustrative dashboard of CPU/memory indicators,
+  progress bars, and a rolling line chart. These values are simulated UI data,
+  not measurements from the host build.
+- **Component gallery:** a switch, checkbox, slider, reset button, color
+  palette, chart, bars, event callbacks, timers, and custom styles. The switch
+  pauses/resumes metric updates; the slider controls their refresh interval.
+
+The window opens at 1620x1020. LVGL renders its 1080x680 design at 150% using
+object transforms, with an 18px default font, 24px section headings, and 32px
+page headings rather than bitmap scaling. Run `antel run -f window`; press
+Escape or close the window to quit.
 Upstream also has per-test executables and the optional, normally disabled
 `lvgl_thorvg` target; this demo does not include those. See
 [`demos/lvgl/README.md`](https://github.com/luskyle/antelope/blob/main/demos/lvgl/README.md)

@@ -376,13 +376,26 @@ antel run -f window
 `.antel/build/lvgl_shared/liblvgl.so.9.6`（核心库含 386 个对象），以及 examples（326 个对象）、
 demos（84 个对象）归档；共享库的 SONAME 为 `liblvgl.so.9`。examples/demos 是静态归档而非
 独立可执行程序，消费端还需链接 LVGL 核心库。`before_build` 运行
-`prepare_lv_conf.py`，在 `.antel/lvgl/lv_conf.h` 生成 RGB565、无 OS 集成配置。
+`prepare_lv_conf.py`，把 LVGL 配置头生成到 `.antel/lvgl/lv_conf.h`，不污染源码目录；
+配置 RGB565、关闭 OS 集成与选择桌面 libc 分配器，并启用 Montserrat 18–32 字体。
 上游还有按测试用例生成的测试程序，以及默认关闭的可选 `lvgl_thorvg`；此 demo 暂不包含它们。
-窗体应用以 Antelope 工具介绍为主题，SDL2 承载 LVGL 绘制并直接链接
-`.antel/build/lvgl_static/liblvgl.a`。三个可交互页面分别介绍 Antel 的 ref/`before_build`/
-增量构建与目标类型、用图表和进度条展示模拟构建活动，以及 LVGL 控件展厅；展厅含折线图、
-按钮、滑块、开关、复选框、事件回调、定时器与自定义样式；开关可暂停/恢复指标更新，滑块
-可调节刷新间隔。需要 SDL2 开发库和桌面显示环境，按 Escape 退出。
+
+四份库目标 JSON 各自声明 `release/v9.6` ref 并维护源文件清单，不调用 CMake 或其生成系统。
+`antel fetch-ref -f static` 将上游取到 `.antel/refs/lvgl`，`antel rebuild -f <目标>` 负责
+编译源文件、归档或链接产物；`-f` 指定不带 `.json` 后缀的配置名。共享库、examples、
+demos 的输出分别位于 `.antel/build/lvgl_shared/`、`.antel/build/lvgl_examples_examples/`、
+`.antel/build/lvgl_demos_demos/`。
+
+窗体应用是独立的 SDL2 消费端，必须先构建 `static`，再构建 `window`；它直接链接
+`.antel/build/lvgl_static/liblvgl.a`，通过 `pkg-config` 获取 SDL2 编译与链接参数。
+需要 SDL2 开发库、`pkg-config` 和桌面显示环境。应用以 Antelope 工具介绍为主题，有三个可交互页面：
+
+- **概览**：介绍 JSON 目标、Git ref、`before_build`、增量编译与目标类型，并展示动画构建活动图表、按钮和刷新间隔滑块。
+- **构建性能**：用进度条、CPU/内存指标和滚动折线图演示监控仪表板；数据是模拟演示，并非实际宿主机采样。
+- **组件展厅**：演示开关、复选框、滑块、重置按钮、色板、图表、进度条、事件回调、定时器和自定义样式；开关控制指标更新，滑块改变刷新频率。
+
+窗体默认 1620×1020，界面由 LVGL 按 150% 变换；正文默认使用 18px 字体，分区标题和页面标题分别使用 24px、32px 字体，由 LVGL 原生重绘。
+运行 `antel run -f window` 启动，按 Escape 或关闭窗口退出。
 完整说明见
 [`demos/lvgl/README.md`](https://github.com/luskyle/antelope/blob/main/demos/lvgl/README.md)。
 
