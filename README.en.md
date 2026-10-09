@@ -95,7 +95,7 @@ Full documentation lives at [https://luskyle.github.io/antelope/](https://luskyl
 | [Compilers](https://luskyle.github.io/antelope/en/compilers/)          | gxx / llvm / msvc support and target types                                  |
 | [Development](https://luskyle.github.io/antelope/en/development/)      | testing, packaging, release flow and workflows                               |
 
-Built-in examples under `demos/`: `helloworld`, `cdemo`, `gtkcalc`, `resdemo`, `antelstats`, plus public `libyaml`, `cJSON`, `libpng`, `yaml-cpp`, `json-c`, `libuv`, and `libgit2` projects fetched through `ref` and built by antel. The success-case index lists verified targets and config entry points. The public project configs do not use CMake to generate configuration headers or run builds.
+Built-in examples under `demos/`: `helloworld`, `cdemo`, `gtkcalc`, `resdemo`, `antelstats`, plus public `libyaml`, `cJSON`, `libpng`, `yaml-cpp`, `json-c`, `libuv`, `libgit2`, and `LVGL` projects fetched through `ref` and built by antel. The LVGL case also includes an SDL2 desktop app that introduces Antelope's build flow while showcasing charts and interactive widgets. The success-case index lists verified targets and config entry points. The public project configs do not use CMake to generate configuration headers or run builds.
 
 ## Development
 

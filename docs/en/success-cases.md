@@ -20,6 +20,14 @@ This index collects verified Antel build cases, including built-in examples and 
 
     [:octicons-arrow-right-24: Build details](examples.md#case-libuv) · [Project source](https://github.com/luskyle/antelope/tree/main/demos/libuv)
 
+-   **[LVGL](examples.md#case-lvgl)**
+
+    ---
+
+    Builds the official LVGL 9.6 core and UI libraries with Antel, plus an SDL2 app introducing Antelope through interactive charts and widgets.
+
+    [:octicons-arrow-right-24: Build details](examples.md#case-lvgl) · [Project source](https://github.com/luskyle/antelope/tree/main/demos/lvgl)
+
 -   **[json-c](examples.md#case-json-c)**
 
     ---

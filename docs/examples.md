@@ -355,6 +355,37 @@ antel rebuild -f benchmarks
 `.antel/build/uv_shared/libuv.so.1.0.0`、两个测试运行器和 benchmark runner。测试配置包含
 185 个 Linux 上游测试源文件；consumer 链接静态库需 pthread、dl 和 rt。
 
+## LVGL：嵌入式图形库（ref） { #case-lvgl }
+
+位置：`demos/lvgl/`。示例使用 LVGL 官方 `release/v9.6` 分支，直接维护核心静态/共享库及
+上游 examples、demos 的 Antel 目标 JSON。目标分别声明同一个上游 ref；只编译可移植核心与
+UI 模块，排除平台显示/输入驱动和可选第三方 codec，不依赖窗口系统，也不调用 CMake。
+
+```bash
+cd demos/lvgl
+antel fetch-ref -f static
+antel rebuild -f static
+antel rebuild -f shared
+antel rebuild -f examples
+antel rebuild -f demos
+antel rebuild -f window
+antel run -f window
+```
+
+生成 `.antel/build/lvgl_static/liblvgl.a` 和
+`.antel/build/lvgl_shared/liblvgl.so.9.6`（核心库含 386 个对象），以及 examples（326 个对象）、
+demos（84 个对象）归档；共享库的 SONAME 为 `liblvgl.so.9`。examples/demos 是静态归档而非
+独立可执行程序，消费端还需链接 LVGL 核心库。`before_build` 运行
+`prepare_lv_conf.py`，在 `.antel/lvgl/lv_conf.h` 生成 RGB565、无 OS 集成配置。
+上游还有按测试用例生成的测试程序，以及默认关闭的可选 `lvgl_thorvg`；此 demo 暂不包含它们。
+窗体应用以 Antelope 工具介绍为主题，SDL2 承载 LVGL 绘制并直接链接
+`.antel/build/lvgl_static/liblvgl.a`。三个可交互页面分别介绍 Antel 的 ref/`before_build`/
+增量构建与目标类型、用图表和进度条展示模拟构建活动，以及 LVGL 控件展厅；展厅含折线图、
+按钮、滑块、开关、复选框、事件回调、定时器与自定义样式；开关可暂停/恢复指标更新，滑块
+可调节刷新间隔。需要 SDL2 开发库和桌面显示环境，按 Escape 退出。
+完整说明见
+[`demos/lvgl/README.md`](https://github.com/luskyle/antelope/blob/main/demos/lvgl/README.md)。
+
 ## libgit2：大型 Git 库（ref + Python 配置生成） { #case-libgit2 }
 
 位置：`demos/libgit2/`。`prepare_antelope.py` 直接选择 Linux 源文件、生成 feature header

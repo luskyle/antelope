@@ -1,0 +1,43 @@
+{
+    "projectName": "lvgl_window_demo",
+    "target_type": "exe",
+    "compiler": "gxx",
+    "ref": [
+        {
+            "url": "https://github.com/lvgl/lvgl.git",
+            "branch": "release/v9.6",
+            "name": "lvgl"
+        }
+    ],
+    "before_build": [
+        {
+            "command": [
+                "python3",
+                "prepare_lv_conf.py"
+            ],
+            "outputs": [
+                ".antel/lvgl/lv_conf.h"
+            ]
+        }
+    ],
+    "source": [
+        "window_demo.c"
+    ],
+    "include_directories": [],
+    "compile_args": [
+        "-std=c11",
+        "-O2",
+        "-Wall",
+        "-DLV_CONF_INCLUDE_SIMPLE=1",
+        "-I.antel/lvgl",
+        "-I.antel/refs/lvgl/include",
+        "-I.antel/refs/lvgl"
+    ],
+    "link_args": [
+        ".antel/build/lvgl_static/liblvgl.a",
+        "-lm"
+    ],
+    "pkg_config": [
+        "sdl2"
+    ]
+}

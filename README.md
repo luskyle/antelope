@@ -95,7 +95,7 @@ antel analyze    # 生成可视化分析报告 report.html
 | [编译器支持](https://luskyle.github.io/antelope/compilers/)       | gxx / llvm / msvc 与目标类型的支持细节                                              |
 | [开发与发布](https://luskyle.github.io/antelope/development/)     | 测试、打包、发版流程与工作流                                                        |
 
-自带示例（`demos/` 下）：`helloworld`、`cdemo`、`gtkcalc`、`resdemo`、`antelstats`，以及通过 `ref` 获取并由 Antel 编译的公开项目：`libyaml`、`cjson`、`libpng`、`yaml-cpp`、`json-c`、`libuv`、`libgit2`。成功案例总览列出了各项目已验证的目标及对应配置。公开项目的构建配置不依赖 CMake 生成配置头或执行构建。
+自带示例（`demos/` 下）：`helloworld`、`cdemo`、`gtkcalc`、`resdemo`、`antelstats`，以及通过 `ref` 获取并由 Antel 编译的公开项目：`libyaml`、`cjson`、`libpng`、`yaml-cpp`、`json-c`、`libuv`、`libgit2`、`lvgl`。LVGL 案例还提供一个介绍 Antelope 构建流程、同时展示图表和交互控件的 SDL2 窗体应用。成功案例总览列出了各项目已验证的目标及对应配置。公开项目的构建配置不依赖 CMake 生成配置头或执行构建。
 
 ## 开发
 

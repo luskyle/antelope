@@ -20,6 +20,14 @@
 
     [:octicons-arrow-right-24: 构建详情](examples.md#case-libuv) · [项目源码](https://github.com/luskyle/antelope/tree/main/demos/libuv)
 
+-   **[LVGL](examples.md#case-lvgl)**
+
+    ---
+
+    官方 LVGL 9.6 核心与 UI 库由 Antel 构建；另有 SDL2 窗体介绍 Antelope，并展示交互式图表与控件。
+
+    [:octicons-arrow-right-24: 构建详情](examples.md#case-lvgl) · [项目源码](https://github.com/luskyle/antelope/tree/main/demos/lvgl)
+
 -   **[json-c](examples.md#case-json-c)**
 
     ---

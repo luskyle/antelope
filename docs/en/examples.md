@@ -367,6 +367,46 @@ Outputs include `.antel/build/uv_antel/libuv.a`, versioned shared library
 The test config includes all 185 upstream test sources applicable to Linux.
 Consumers of the static archive need pthread, dl, and rt.
 
+## LVGL: embedded graphics library (`ref`) { #case-lvgl }
+
+Location: `demos/lvgl/`. The demo uses LVGL's official `release/v9.6` branch and
+a set of maintained Antel target JSON files for the upstream core, examples,
+and demos. Each target declares the same upstream ref. It builds static/shared
+core libraries plus static archives for examples and demos, excluding
+platform display/input drivers and optional third-party codecs; no window system
+or CMake is required.
+
+```bash
+cd demos/lvgl
+antel fetch-ref -f static
+antel rebuild -f static
+antel rebuild -f shared
+antel rebuild -f examples
+antel rebuild -f demos
+antel rebuild -f window
+antel run -f window
+```
+
+The outputs are `.antel/build/lvgl_static/liblvgl.a` (386 objects),
+`.antel/build/lvgl_shared/liblvgl.so.9.6` (SONAME `liblvgl.so.9`),
+`.antel/build/lvgl_examples_examples/liblvgl_examples.a` (326 objects), and
+`.antel/build/lvgl_demos_demos/liblvgl_demos.a` (84 objects). The examples and
+demos are archives, not standalone executables; consumers also link the LVGL
+core library. The `before_build` hook runs `prepare_lv_conf.py` to generate an
+RGB565/no-OS configuration at `.antel/lvgl/lv_conf.h`.
+The SDL2 desktop app introduces Antelope and links
+`.antel/build/lvgl_static/liblvgl.a`. Its three interactive pages cover Antel's
+refs, `before_build`, incremental compilation, and target types; an illustrative
+build-activity monitor; and an LVGL widget gallery with a line chart, bars,
+buttons, sliders, switches, checkboxes, event callbacks, timers, and custom
+styles. The switch pauses/resumes metric updates and the slider adjusts their
+refresh interval. SDL2 development files and a desktop display are required;
+press Escape to quit.
+Upstream also has per-test executables and the optional, normally disabled
+`lvgl_thorvg` target; this demo does not include those. See
+[`demos/lvgl/README.md`](https://github.com/luskyle/antelope/blob/main/demos/lvgl/README.md)
+for details.
+
 ## libgit2: large Git library (`ref` and Python-generated config) { #case-libgit2 }
 
 Location: `demos/libgit2/`. `prepare_antelope.py` selects Linux sources,

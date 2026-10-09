@@ -9,7 +9,7 @@
 <div class="hero-actions">
 <a href="quick-start/" class="md-button md-button--primary">快速开始</a>
 <a href="commands/" class="md-button">命令参考</a>
-<a href="https://github.com/luskyle/antelope/releases" class="md-button">下载 v1.3</a>
+<a href="https://github.com/luskyle/antelope/releases" class="md-button">下载 v1.4</a>
 </div>
 </div>
 
