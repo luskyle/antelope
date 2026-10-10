@@ -6,7 +6,7 @@ The example projects shipped with the repository live under `demos/` — all of 
 
 Location: `demos/gtkcalc/`. A calculator written with libadwaita (GTK 4), demonstrating the most common GUI project shape: **GUI + external library**. It never hand-writes `-I`/`-l` — everything comes from `pkg_config`.
 
-![gtkcalc UI](images/demo_gtkcalc.png)
+![gtkcalc UI](../images/demo_gtkcalc.png)
 
 **antel.json** (`demos/gtkcalc/antel.json`):
 
@@ -66,7 +66,7 @@ Location: `demos/resdemo/`. One program carries resources in all three forms, an
 - **gresource — single-file distribution**: the whole UI (`main.ui`), styles (`style.css`), icon (`logo.png`) and text (`notes.txt`) are compiled into the executable; GtkBuilder / CSS provider load them straight from the resource path
 - **embed — single-file distribution**: `assets/payload.bin` is embedded into the ELF via `ld -r -b binary`; the program accesses it through `_binary_` symbols
 
-![resdemo UI](images/demo_resdemo.png)
+![resdemo UI](../images/demo_resdemo.png)
 
 **antel.json** (`demos/resdemo/antel.json`):
 
@@ -376,11 +376,11 @@ core libraries plus static archives for examples and demos, excluding
 platform display/input drivers and optional third-party codecs; no window system
 or CMake is required.
 
-![LVGL desktop demo: Antelope build overview](images/demo_lvgl_overview.png)
+![LVGL desktop demo: Antelope build overview](../images/demo_lvgl_overview.png)
 
-![LVGL desktop demo: build performance dashboard](images/demo_lvgl_performance.png)
+![LVGL desktop demo: build performance dashboard](../images/demo_lvgl_performance.png)
 
-![LVGL desktop demo: interactive component gallery](images/demo_lvgl_components.png)
+![LVGL desktop demo: interactive component gallery](../images/demo_lvgl_components.png)
 
 ```bash
 cd demos/lvgl
