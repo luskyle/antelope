@@ -376,11 +376,11 @@ core libraries plus static archives for examples and demos, excluding
 platform display/input drivers and optional third-party codecs; no window system
 or CMake is required.
 
-![LVGL desktop demo: Antelope build overview](../images/demo_lvgl_overview.png)
+![LVGL desktop demo: Antelope build overview](../images/demo_lvgl_overview.png?v=2)
 
-![LVGL desktop demo: build performance dashboard](../images/demo_lvgl_performance.png)
+![LVGL desktop demo: build performance dashboard](../images/demo_lvgl_performance.png?v=2)
 
-![LVGL desktop demo: interactive component gallery](../images/demo_lvgl_components.png)
+![LVGL desktop demo: interactive component gallery](../images/demo_lvgl_components.png?v=2)
 
 ```bash
 cd demos/lvgl
